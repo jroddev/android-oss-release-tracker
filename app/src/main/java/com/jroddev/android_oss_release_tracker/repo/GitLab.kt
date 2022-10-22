@@ -12,7 +12,7 @@ class GitLab(repoUrl: String) : Repo {
 
     // Aurora Store
     // from repo URL https://github.com/AuroraOSS/AuroraStore
-    override suspend fun getApplicationFriendlyName(): String {
+    override suspend fun getApplicationName(): String {
         TODO("Not yet implemented")
     }
 
@@ -25,6 +25,11 @@ class GitLab(repoUrl: String) : Repo {
     // https://gitlab.com/AuroraOSS/AuroraStore/-/releases/4.1.1
     // derived from RSS
     override suspend fun getLinkToLatestVersion(): String {
+        TODO("Not yet implemented")
+    }
+
+    // e.g. https://gitlab.com/AuroraOSS/AuroraStore/-/raw/master/app/src/main/res/mipmap-mdpi/ic_launcher.png
+    override suspend fun getIconUrl(): String {
         TODO("Not yet implemented")
     }
 }
