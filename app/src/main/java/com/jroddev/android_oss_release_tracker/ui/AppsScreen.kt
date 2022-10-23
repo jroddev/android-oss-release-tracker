@@ -4,6 +4,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
@@ -36,7 +38,9 @@ fun AppsScreen(
         "https://github.com/bitfireAT/davx5-ose"
     )}
 
-    Column {
+    val verticalScroll = rememberScrollState()
+
+    Column(modifier = Modifier.verticalScroll(verticalScroll)) {
         repoUrls.forEach { url -> RenderItem(packageManager, requestQueue, url) }
     }
 }
@@ -60,7 +64,7 @@ fun ErroredTracker(metaData: RepoMetaData) {
     val showErrors = remember { mutableStateOf(false) }
     val bullet = "\u2022"
 
-    Column {
+    Column(modifier = Modifier.padding(10.dp, 10.dp)) {
         Text(text = metaData.repoUrl)
         Button(onClick = { showErrors.value = !showErrors.value }) {
             Text(text = if (showErrors.value) "Hide Errors" else "Show Errors")

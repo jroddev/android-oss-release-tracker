@@ -10,7 +10,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.android.volley.RequestQueue
 import com.jroddev.android_oss_release_tracker.repo.MetaDataState
@@ -40,7 +42,7 @@ fun TrackerPreview(
         .padding(10.dp, 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
-                modifier = Modifier.size(50.dp, 50.dp),
+                modifier = Modifier.size(50.dp, 50.dp).padding(10.dp, 0.dp),
                 model = metaData.iconUrl,
                 contentDescription = null
             )
@@ -72,7 +74,12 @@ fun NewTrackerScreen(
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        Text(text = "Add a new App Tracker")
+        Text(
+            text = "Add a new App Tracker",
+            fontSize = 24.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(0.dp, 20.dp)
+        )
         
         OutlinedTextField(
             modifier = Modifier
@@ -102,7 +109,7 @@ fun NewTrackerScreen(
                 Text(text = "Test")
             }
         }
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(40.dp))
     }
 
 
