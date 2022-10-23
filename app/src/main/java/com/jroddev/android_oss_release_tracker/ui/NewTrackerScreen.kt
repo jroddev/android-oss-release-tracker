@@ -1,6 +1,7 @@
 package com.jroddev.android_oss_release_tracker.ui
 
 import android.content.SharedPreferences
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -10,11 +11,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.android.volley.RequestQueue
+import com.jroddev.android_oss_release_tracker.PersistentState
 import com.jroddev.android_oss_release_tracker.repo.MetaDataState
 import com.jroddev.android_oss_release_tracker.repo.RepoMetaData
 
@@ -23,7 +26,7 @@ import com.jroddev.android_oss_release_tracker.repo.RepoMetaData
 fun TrackerPreview(
     repoUrl: String,
     requestQueue: RequestQueue,
-    onAdd: (String) -> Unit
+    onAdd: (String, String) -> Unit
 ) {
     val metaData = remember { RepoMetaData(
         repoUrl,
@@ -59,7 +62,7 @@ fun TrackerPreview(
                 Text(text = metaData.latestVersionDate.value ?: fallbackText)
             }
             Spacer(modifier = Modifier.weight(1.0f))
-            Button(enabled = isValid.value , onClick = { onAdd(repoUrl) }) {
+            Button(enabled = isValid.value , onClick = { onAdd(repoUrl, metaData.appName) }) {
                 Icon(Icons.Default.Add, contentDescription = null)
             }
         }
@@ -73,6 +76,7 @@ fun NewTrackerScreen(
     sharedPreferences: SharedPreferences,
     requestQueue: RequestQueue
 ) {
+    val ctx = LocalContext.current
     val repoInputBox = remember { mutableStateOf("") }
     val isTested = remember { mutableStateOf(false) }
 
@@ -101,16 +105,12 @@ fun NewTrackerScreen(
         )
 
         if (isTested.value) {
-            TrackerPreview(repoInputBox.value, requestQueue) { repo ->
+            TrackerPreview(repoInputBox.value, requestQueue) { repo, appName ->
                 run {
-                    println("Add $repo")
-                    val existing = sharedPreferences.getStringSet("app_trackers", setOf())!!
-                    val newList = mutableSetOf<String>()
-                    newList.addAll(existing)
-                    newList.add(repo)
-                    val editor = sharedPreferences.edit()
-                    editor.putStringSet("app_trackers", newList)
-                    editor.apply()
+                    PersistentState.addTracker(sharedPreferences, repo)
+                    Toast.makeText(ctx, "Added $appName to your trackers", Toast.LENGTH_LONG).show()
+                    repoInputBox.value = ""
+                    isTested.value = false
 
                     println("trackers: ${sharedPreferences.getStringSet("app_trackers", setOf())!!}")
                 }

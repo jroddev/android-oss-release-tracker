@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.android.volley.RequestQueue
+import com.jroddev.android_oss_release_tracker.PersistentState
 import com.jroddev.android_oss_release_tracker.repo.MetaDataState
 import com.jroddev.android_oss_release_tracker.repo.RepoMetaData
 
@@ -33,26 +34,15 @@ fun AppsScreen(
     sharedPreferences: SharedPreferences,
     requestQueue: RequestQueue
 ) {
-
-    val repoUrls = remember {
-        sharedPreferences.getStringSet("app_trackers", setOf())!!
-    }
-
-
-//    val repoUrls = remember { listOf(
-//        "https://github.com/jroddev/android-oss-release-tracker",
-////                            "https://gitlab.com/AuroraOSS/AuroraStore",
-//        "https://github.com/TeamNewPipe/NewPipe",
-//        "https://github.com/bitfireAT/davx5-ose"
-//    )}
-
     val verticalScroll = rememberScrollState()
+    val repoUrls = remember {
+        PersistentState.getSavedTrackers(sharedPreferences)
+    }
 
     Column(modifier = Modifier.verticalScroll(verticalScroll)) {
         if (repoUrls.isEmpty()) {
             Text(text = "You aren't tracking any application repositories")
         }
-        
         repoUrls.forEach { url -> RenderItem(packageManager, requestQueue, url) }
     }
 }

@@ -29,7 +29,7 @@ class MainActivity : ComponentActivity() {
             AndroidossreleasetrackerTheme {
 
                 val navController = rememberNavController()
-                val sharedPreferences = getSharedPreferences("PersistedState", MODE_PRIVATE)
+                val sharedPreferences = getSharedPreferences(PersistentState.STATE_FILENAME, MODE_PRIVATE)
 
                 // A surface container using the 'background' color from the theme
                 Surface(
