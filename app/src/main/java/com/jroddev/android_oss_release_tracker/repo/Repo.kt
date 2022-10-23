@@ -4,10 +4,19 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.android.volley.RequestQueue
 
+enum class MetaDataState {
+    Unsupported,
+    Loading,
+    Errored,
+    Loaded
+}
+
 data class RepoMetaData(
     val requestQueue: RequestQueue,
+    val state: MutableState<MetaDataState>,
     val repoUrl: String,
     val packageName: MutableState<String?>,
+    val installedVersion: MutableState<String?>,
     val latestVersion: MutableState<String?>,
     val latestVersionDate: MutableState<String?>,
     val latestVersionUrl: MutableState<String?>,
@@ -20,28 +29,26 @@ data class RepoMetaData(
 
     init {
         val repo: Repo? = if (repoUrl.contains("github")) {
-            GitHub(repoUrl, requestQueue)
+            GitHub(this, requestQueue)
 //        } else if (repoUrl.contains("gitlab")) {
 //            GitLab(repoUrl, requestQueue)
         } else {
-            orgName = ""
-            appName = ""
-            iconUrl = ""
-            errors.add("Repo URL: $repoUrl could not be parsed or is not supported")
             null
         }
 
-        if (repo != null) {
+        if (repo == null) {
+            state.value = MetaDataState.Unsupported
+            orgName = ""
+            appName = ""
+            iconUrl = ""
+        }
+        else {
+            state.value = MetaDataState.Loading
             orgName = repo.getOrgName()
             appName = repo.getApplicationName()
-            iconUrl = repo.getIconUrl()
-            repo.getPackageName(packageName, errors)
-            repo.getLatestVersion(
-                latestVersion,
-                latestVersionDate,
-                latestVersionUrl,
-                errors
-            )
+            iconUrl = repo.fetchIconUrl()
+            repo.fetchPackageName()
+            repo.fetchLatestVersion()
         }
     }
 }
@@ -50,7 +57,7 @@ data class RepoMetaData(
 interface Repo {
     fun getOrgName(): String
     fun getApplicationName(): String
-    fun getIconUrl(): String
-    fun getPackageName(output: MutableState<String?>, errors: SnapshotStateList<String>)
-    fun getLatestVersion(version: MutableState<String?>, lastUpdated: MutableState<String?>,link: MutableState<String?>, errors: SnapshotStateList<String>)
+    fun fetchIconUrl(): String
+    fun fetchPackageName()
+    fun fetchLatestVersion()
 }
