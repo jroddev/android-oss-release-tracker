@@ -1,6 +1,8 @@
 package com.jroddev.android_oss_release_tracker
 
+import android.content.Context
 import android.content.SharedPreferences
+import android.widget.Toast
 
 object PersistentState {
 
@@ -12,7 +14,7 @@ object PersistentState {
         return sharedPreferences.getStringSet("app_trackers", defaultTrackers)!!
     }
 
-    fun addTracker(sharedPreferences: SharedPreferences, repo: String) {
+    fun addTracker(ctx: Context, sharedPreferences: SharedPreferences, appName: String, repo: String) {
         println("Add $repo")
         val existing = sharedPreferences.getStringSet(APP_TRACKERS, defaultTrackers)!!
         val newList = mutableSetOf<String>()
@@ -21,9 +23,10 @@ object PersistentState {
         val editor = sharedPreferences.edit()
         editor.putStringSet("app_trackers", newList)
         editor.apply()
+        Toast.makeText(ctx, "Added $appName to your trackers", Toast.LENGTH_LONG).show()
     }
 
-    fun removeTracker(sharedPreferences: SharedPreferences, repo: String) {
+    fun removeTracker(ctx: Context, sharedPreferences: SharedPreferences, appName: String, repo: String) {
         println("Remove $repo")
         val existing = sharedPreferences.getStringSet(APP_TRACKERS, defaultTrackers)!!
         val newList = mutableSetOf<String>()
@@ -32,6 +35,7 @@ object PersistentState {
         val editor = sharedPreferences.edit()
         editor.putStringSet("app_trackers", newList)
         editor.apply()
+        Toast.makeText(ctx, "Deleted $appName from your trackers", Toast.LENGTH_LONG).show()
     }
 
 }

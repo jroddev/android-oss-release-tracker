@@ -107,7 +107,7 @@ fun NewTrackerScreen(
         if (isTested.value) {
             TrackerPreview(repoInputBox.value, requestQueue) { repo, appName ->
                 run {
-                    PersistentState.addTracker(sharedPreferences, repo)
+                    PersistentState.addTracker(ctx, sharedPreferences, appName, repo)
                     Toast.makeText(ctx, "Added $appName to your trackers", Toast.LENGTH_LONG).show()
                     repoInputBox.value = ""
                     isTested.value = false

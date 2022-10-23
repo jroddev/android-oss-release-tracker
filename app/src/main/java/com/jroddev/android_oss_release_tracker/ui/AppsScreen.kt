@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,16 +35,27 @@ fun AppsScreen(
     sharedPreferences: SharedPreferences,
     requestQueue: RequestQueue
 ) {
+    val ctx = LocalContext.current
     val verticalScroll = rememberScrollState()
     val repoUrls = remember {
         PersistentState.getSavedTrackers(sharedPreferences)
     }
 
+    val onTrackerDelete = { appName: String, repo: String -> run {
+        PersistentState.removeTracker(ctx, sharedPreferences, appName, repo)
+    }}
+
     Column(modifier = Modifier.verticalScroll(verticalScroll)) {
         if (repoUrls.isEmpty()) {
             Text(text = "You aren't tracking any application repositories")
         }
-        repoUrls.forEach { url -> RenderItem(packageManager, requestQueue, url) }
+        repoUrls.forEach { url -> run {
+            RenderItem(
+                packageManager,
+                requestQueue,
+                url,
+                onTrackerDelete)
+        } }
     }
 }
 
@@ -82,7 +94,9 @@ fun ErroredTracker(metaData: RepoMetaData) {
 }
 
 @Composable
-fun LoadedTracker(metaData: RepoMetaData) {
+fun LoadedTracker(
+    metaData: RepoMetaData
+) {
     val ctx = LocalContext.current
 
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -127,7 +141,6 @@ fun LoadedTracker(metaData: RepoMetaData) {
                     ctx.startActivity(urlIntent)
                 }) {
                     Icon(Icons.Default.ArrowForward, contentDescription = null)
-//                    Text(text = "Latest")
                 }
             }
             val packageNameValue = metaData.packageName.value
@@ -139,12 +152,8 @@ fun LoadedTracker(metaData: RepoMetaData) {
                     fontSize = 12.sp
                 )
             }
-
         }
-
     }
-
-
 }
 
 
@@ -153,7 +162,8 @@ fun LoadedTracker(metaData: RepoMetaData) {
 fun RenderItem(
     packageManager: PackageManager,
     requestQueue: RequestQueue,
-    repoUrl: String
+    repoUrl: String,
+    onDelete: (String, String) -> Unit
 ) {
     val metaData = remember { RepoMetaData(
         repoUrl,
@@ -178,6 +188,10 @@ fun RenderItem(
             MetaDataState.Loading -> LoadingTracker(metaData)
             MetaDataState.Errored -> ErroredTracker(metaData)
             MetaDataState.Loaded -> LoadedTracker(metaData)
+        }
+
+        Button(onClick = { onDelete(metaData.appName, metaData.repoUrl) }) {
+            Icon(Icons.Default.Delete, contentDescription = null)
         }
     }
 }
