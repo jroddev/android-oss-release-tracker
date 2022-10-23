@@ -36,6 +36,12 @@ fun TrackerPreview(
     if (!isValid.value && metaData.state.value == MetaDataState.Loaded) {
         isValid.value = true
     }
+    val fallbackText = when(metaData.state.value) {
+        MetaDataState.Unsupported -> "<unsupported>"
+        MetaDataState.Loading -> "<loading>"
+        MetaDataState.Errored -> "<error>"
+        MetaDataState.Loaded -> "<loaded but null>"
+    }
 
     Card(modifier = Modifier
         .fillMaxWidth()
@@ -48,9 +54,9 @@ fun TrackerPreview(
             )
             Column(modifier = Modifier.padding(10.dp, 0.dp)) {
                 Text(text = metaData.appName)
-                Text(text = metaData.packageName.value ?: "<loading>")
-                Text(text = metaData.latestVersion.value ?: "<loading>")
-                Text(text = metaData.latestVersionDate.value ?: "<loading>")
+                Text(text = metaData.packageName.value ?: fallbackText)
+                Text(text = metaData.latestVersion.value ?: fallbackText)
+                Text(text = metaData.latestVersionDate.value ?: fallbackText)
             }
             Spacer(modifier = Modifier.weight(1.0f))
             Button(enabled = isValid.value , onClick = { onAdd(repoUrl) }) {
@@ -95,7 +101,20 @@ fun NewTrackerScreen(
         )
 
         if (isTested.value) {
-            TrackerPreview(repoInputBox.value, requestQueue) { repo -> println("Add $repo") }
+            TrackerPreview(repoInputBox.value, requestQueue) { repo ->
+                run {
+                    println("Add $repo")
+                    val existing = sharedPreferences.getStringSet("app_trackers", setOf())!!
+                    val newList = mutableSetOf<String>()
+                    newList.addAll(existing)
+                    newList.add(repo)
+                    val editor = sharedPreferences.edit()
+                    editor.putStringSet("app_trackers", newList)
+                    editor.apply()
+
+                    println("trackers: ${sharedPreferences.getStringSet("app_trackers", setOf())!!}")
+                }
+            }
         }
 
 

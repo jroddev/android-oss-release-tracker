@@ -1,6 +1,7 @@
 package com.jroddev.android_oss_release_tracker.ui
 
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.compose.foundation.layout.*
@@ -29,18 +30,29 @@ import com.jroddev.android_oss_release_tracker.repo.RepoMetaData
 @Composable
 fun AppsScreen(
     packageManager: PackageManager,
+    sharedPreferences: SharedPreferences,
     requestQueue: RequestQueue
 ) {
-    val repoUrls = remember { listOf(
-        "https://github.com/jroddev/android-oss-release-tracker",
-//                            "https://gitlab.com/AuroraOSS/AuroraStore",
-        "https://github.com/TeamNewPipe/NewPipe",
-        "https://github.com/bitfireAT/davx5-ose"
-    )}
+
+    val repoUrls = remember {
+        sharedPreferences.getStringSet("app_trackers", setOf())!!
+    }
+
+
+//    val repoUrls = remember { listOf(
+//        "https://github.com/jroddev/android-oss-release-tracker",
+////                            "https://gitlab.com/AuroraOSS/AuroraStore",
+//        "https://github.com/TeamNewPipe/NewPipe",
+//        "https://github.com/bitfireAT/davx5-ose"
+//    )}
 
     val verticalScroll = rememberScrollState()
 
     Column(modifier = Modifier.verticalScroll(verticalScroll)) {
+        if (repoUrls.isEmpty()) {
+            Text(text = "You aren't tracking any application repositories")
+        }
+        
         repoUrls.forEach { url -> RenderItem(packageManager, requestQueue, url) }
     }
 }

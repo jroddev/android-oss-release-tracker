@@ -60,7 +60,7 @@ fun NavHostContainer(
 
             // route : Home
             composable("apps") {
-                AppsScreen(packageManager, requestQueue)
+                AppsScreen(packageManager, sharedPreferences, requestQueue)
             }
 
             // route : search
