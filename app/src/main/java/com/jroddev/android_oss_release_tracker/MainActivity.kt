@@ -29,6 +29,7 @@ class MainActivity : ComponentActivity() {
             AndroidossreleasetrackerTheme {
 
                 val navController = rememberNavController()
+                val sharedPreferences = getSharedPreferences("PersistedState", MODE_PRIVATE)
 
                 // A surface container using the 'background' color from the theme
                 Surface(
@@ -37,12 +38,14 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Scaffold(
                         bottomBar = { BottomNavigationBar(navController = navController) },
-                        content = {
-                                padding -> NavHostContainer(
-                            navController = navController,
-                            padding = padding,
-                            packageManager,
-                            requestQueue)
+                        content = { padding ->
+                            NavHostContainer(
+                                navController = navController,
+                                padding = padding,
+                                sharedPreferences,
+                                packageManager,
+                                requestQueue
+                            )
                         }
                     )
                 }

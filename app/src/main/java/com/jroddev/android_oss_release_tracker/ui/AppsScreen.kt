@@ -4,11 +4,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.Button
-import androidx.compose.material.Card
-import androidx.compose.material.Text
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -50,7 +49,10 @@ fun UnsupportedTracker(metaData: RepoMetaData) {
 
 @Composable
 fun LoadingTracker(metaData: RepoMetaData) {
-    Text(text = "loading ${metaData.appName}")
+    Row {
+        Spacer(modifier = Modifier.size(50.dp, 50.dp))
+        Text(text = "loading ${metaData.appName}")
+    }
 }
 
 @Composable
@@ -78,14 +80,11 @@ fun LoadedTracker(metaData: RepoMetaData) {
     val ctx = LocalContext.current
 
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(modifier = Modifier.size(50.dp, 50.dp)) {
-            println("load ${metaData.iconUrl}")
-            AsyncImage(
-                model = metaData.iconUrl,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        AsyncImage(
+            modifier = Modifier.size(50.dp, 50.dp),
+            model = metaData.iconUrl,
+            contentDescription = null
+        )
         Column(modifier = Modifier.padding(Dp(15f), Dp(0f))) {
             Text(text = metaData.appName)
 
@@ -107,7 +106,7 @@ fun LoadedTracker(metaData: RepoMetaData) {
 
         Column(
             modifier = Modifier
-                .height(81.dp)
+                .height(100.dp)
                 .padding(5.dp, 0.dp),
             verticalArrangement = Arrangement.Bottom,
             horizontalAlignment = Alignment.End
@@ -121,7 +120,8 @@ fun LoadedTracker(metaData: RepoMetaData) {
                     )
                     ctx.startActivity(urlIntent)
                 }) {
-                    Text(text = "Latest")
+                    Icon(Icons.Default.ArrowForward, contentDescription = null)
+//                    Text(text = "Latest")
                 }
             }
             val packageNameValue = metaData.packageName.value
@@ -149,35 +149,21 @@ fun RenderItem(
     requestQueue: RequestQueue,
     repoUrl: String
 ) {
-    val state = remember { mutableStateOf(MetaDataState.Loading) }
-    val packageName = remember { mutableStateOf<String?>(null) }
-    val installedVersion = remember { mutableStateOf<String?>(null) }
-    val latestVersionDate = remember { mutableStateOf<String?>(null) }
-    val latestVersion = remember { mutableStateOf<String?>(null) }
-    val latestVersionUrl = remember { mutableStateOf<String?>(null) }
-    val errors = remember { mutableStateListOf<String>() }
-
     val metaData = remember { RepoMetaData(
-        requestQueue,
-        state,
         repoUrl,
-        packageName,
-        installedVersion,
-        latestVersion,
-        latestVersionDate,
-        latestVersionUrl,
-        errors
+        requestQueue
     ) }
 
     if (metaData.installedVersion.value == null && metaData.packageName.value != null) {
         metaData.installedVersion.value = packageManager
             .getInstalledPackages(0)
-            .find { it.packageName == packageName.value }
+            .find { it.packageName == metaData.packageName.value }
             ?.versionName ?: "not installed"
     }
 
     Card(
         modifier = Modifier
+            .defaultMinSize(0.dp, 90.dp)
             .fillMaxWidth()
             .padding(0.dp, 5.dp)
     ) {

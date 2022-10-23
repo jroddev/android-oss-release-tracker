@@ -10,18 +10,35 @@ import java.net.URL
 import javax.xml.parsers.DocumentBuilderFactory
 
 // https://github.com/TeamNewPipe/NewPipe
-class GitHub(val metaData: RepoMetaData, val requestQueue: RequestQueue) : Repo {
+class GitHub : Repo {
 
-    fun isLoaded(): Boolean {
-        return metaData.packageName.value != null && metaData.latestVersion.value != null
+    override fun getOrgName(repoUrl: String): String {
+        val url = URL(repoUrl)
+        return url.path.split("/")[1]
     }
+
+    // NewPipe
+    // from repo URL https://github.com/TeamNewPipe/NewPipe
+    override fun getApplicationName(repoUrl: String): String {
+        val url = URL(repoUrl)
+        return url.path.split("/")[2]
+    }
+
+    // e.g. https://github.com/bitfireAT/davx5-ose/raw/dev-ose/app/src/main/res/mipmap-mdpi/ic_launcher.png
+    // e.g. https://github.com/TeamNewPipe/NewPipe/raw/dev/app/src/main/res/mipmap-mdpi/ic_launcher.png
+    override fun fetchIconUrl(repoUrl: String): String {
+        val dev = if (repoUrl.lowercase().contains("-ose")) "dev-ose" else "dev"
+        return "https://github.com/${getOrgName(repoUrl)}/${getApplicationName(repoUrl)}/raw/$dev/app/src/main/res/mipmap-mdpi/ic_launcher.png"
+    }
+
+
 
     // org.schabi.newpipe
     // from https://raw.githubusercontent.com/TeamNewPipe/NewPipe/dev/app/build.gradle
     // applicationId "org.schabi.newpipe"
-    override fun fetchPackageName() {
+    override fun fetchPackageName(metaData: RepoMetaData, requestQueue: RequestQueue) {
         val dev = if (metaData.repoUrl.lowercase().contains("-ose")) "dev-ose" else "dev"
-        val url = "https://raw.githubusercontent.com/${getOrgName()}/${getApplicationName()}/${dev}/app/build.gradle"
+        val url = "https://raw.githubusercontent.com/${getOrgName(metaData.repoUrl)}/${getApplicationName(metaData.repoUrl)}/${dev}/app/build.gradle"
         val request = StringRequest(Request.Method.GET, url,
             { response ->
                 val appId = response
@@ -32,7 +49,7 @@ class GitHub(val metaData: RepoMetaData, val requestQueue: RequestQueue) : Repo 
                     ?.trim()
                 println("APP ID: $appId")
                 metaData.packageName.value = appId
-                if (isLoaded() && metaData.state.value != MetaDataState.Errored) metaData.state.value = MetaDataState.Loaded
+                if (isLoaded(metaData) && metaData.state.value != MetaDataState.Errored) metaData.state.value = MetaDataState.Loaded
             },
             { error ->
                 println(error)
@@ -42,17 +59,6 @@ class GitHub(val metaData: RepoMetaData, val requestQueue: RequestQueue) : Repo 
         requestQueue.add(request)
     }
 
-    override fun getOrgName(): String {
-        val url = URL(metaData.repoUrl)
-        return url.path.split("/")[1]
-    }
-
-    // NewPipe
-    // from repo URL https://github.com/TeamNewPipe/NewPipe
-    override fun getApplicationName(): String {
-        val url = URL(metaData.repoUrl)
-        return url.path.split("/")[2]
-   }
 
     // 0.24.0
     // drop the 'v' prefix if exists
@@ -60,8 +66,8 @@ class GitHub(val metaData: RepoMetaData, val requestQueue: RequestQueue) : Repo 
     // https://github.com/TeamNewPipe/NewPipe/releases/tag/v0.24.0
     // derived from RSS
     // entry.title and entry.link.href
-    override fun fetchLatestVersion() {
-        val rss = "https://github.com/${getOrgName()}/${getApplicationName()}/releases.atom"
+    override fun fetchLatestVersion(metaData: RepoMetaData, requestQueue: RequestQueue) {
+        val rss = "https://github.com/${getOrgName(metaData.repoUrl)}/${getApplicationName(metaData.repoUrl)}/releases.atom"
         println("getLatestVersion: $rss")
         val request = StringRequest(Request.Method.GET, rss,
             { response ->
@@ -84,7 +90,7 @@ class GitHub(val metaData: RepoMetaData, val requestQueue: RequestQueue) : Repo 
                     metaData.latestVersionDate.value = updated
                     metaData.latestVersionUrl.value = updateLink
 
-                    if (isLoaded() && metaData.state.value != MetaDataState.Errored) metaData.state.value = MetaDataState.Loaded
+                    if (isLoaded(metaData) && metaData.state.value != MetaDataState.Errored) metaData.state.value = MetaDataState.Loaded
                 } catch (e: Exception) {
                     metaData.errors.add(e.localizedMessage ?: e.message ?: "Exception thrown while parsing response from $rss")
                     metaData.state.value = MetaDataState.Errored
@@ -98,11 +104,7 @@ class GitHub(val metaData: RepoMetaData, val requestQueue: RequestQueue) : Repo 
         requestQueue.add(request)
     }
 
-
-    // e.g. https://github.com/bitfireAT/davx5-ose/raw/dev-ose/app/src/main/res/mipmap-mdpi/ic_launcher.png
-    // e.g. https://github.com/TeamNewPipe/NewPipe/raw/dev/app/src/main/res/mipmap-mdpi/ic_launcher.png
-    override fun fetchIconUrl(): String {
-        val dev = if (metaData.repoUrl.lowercase().contains("-ose")) "dev-ose" else "dev"
-        return "https://github.com/${getOrgName()}/${getApplicationName()}/raw/$dev/app/src/main/res/mipmap-mdpi/ic_launcher.png"
+    private fun isLoaded(metaData: RepoMetaData): Boolean {
+        return metaData.packageName.value != null && metaData.latestVersion.value != null
     }
 }

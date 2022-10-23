@@ -1,5 +1,6 @@
 package com.jroddev.android_oss_release_tracker.ui
 
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
@@ -46,13 +47,14 @@ object Constants {
 fun NavHostContainer(
     navController: NavHostController,
     padding: PaddingValues,
+    sharedPreferences: SharedPreferences,
     packageManager: PackageManager,
     requestQueue: RequestQueue
 ) {
 
     NavHost(
         navController = navController,
-        startDestination = "apps",
+        startDestination = "new",
         modifier = Modifier.padding(paddingValues = padding),
         builder = {
 
@@ -63,7 +65,7 @@ fun NavHostContainer(
 
             // route : search
             composable("new") {
-                NewTrackerScreen()
+                NewTrackerScreen(sharedPreferences, requestQueue)
             }
 
             // route : profile
