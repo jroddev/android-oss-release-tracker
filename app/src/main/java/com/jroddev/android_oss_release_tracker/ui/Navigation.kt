@@ -54,7 +54,7 @@ fun NavHostContainer(
 
     NavHost(
         navController = navController,
-        startDestination = "new",
+        startDestination = "apps",
         modifier = Modifier.padding(paddingValues = padding),
         builder = {
 

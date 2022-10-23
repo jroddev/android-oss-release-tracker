@@ -4,8 +4,10 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -129,11 +131,14 @@ fun LoadedTracker(
                 .height(100.dp)
                 .padding(5.dp, 0.dp),
             verticalArrangement = Arrangement.Bottom,
-            horizontalAlignment = Alignment.End
+            horizontalAlignment = Alignment.Start
         ) {
             // Make this a hyperlink on the latest version text to save space
             if (metaData.latestVersionUrl.value != null) {
-                Button(onClick = {
+                Button(
+                    modifier = Modifier.size(50.dp, 50.dp),
+                    shape = RoundedCornerShape(50.dp),
+                    onClick = {
                     val urlIntent = Intent(
                         Intent.ACTION_VIEW,
                         Uri.parse(metaData.latestVersionUrl.value)
@@ -183,15 +188,23 @@ fun RenderItem(
             .fillMaxWidth()
             .padding(0.dp, 5.dp)
     ) {
-        when(metaData.state.value) {
-            MetaDataState.Unsupported -> UnsupportedTracker(metaData)
-            MetaDataState.Loading -> LoadingTracker(metaData)
-            MetaDataState.Errored -> ErroredTracker(metaData)
-            MetaDataState.Loaded -> LoadedTracker(metaData)
-        }
 
-        Button(onClick = { onDelete(metaData.appName, metaData.repoUrl) }) {
-            Icon(Icons.Default.Delete, contentDescription = null)
+        Row {
+            when (metaData.state.value) {
+                MetaDataState.Unsupported -> UnsupportedTracker(metaData)
+                MetaDataState.Loading -> LoadingTracker(metaData)
+                MetaDataState.Errored -> ErroredTracker(metaData)
+                MetaDataState.Loaded -> LoadedTracker(metaData)
+            }
+        }
+        Row(
+            modifier = Modifier.defaultMinSize(0.dp, 90.dp).padding(10.dp, 0.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.Top) {
+            TextButton(
+                onClick = { onDelete(metaData.appName, metaData.repoUrl) }) {
+                Icon(Icons.Default.Delete, modifier = Modifier.size(40.dp, 40.dp), contentDescription = null)
+            }
         }
     }
 }
