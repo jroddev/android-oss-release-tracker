@@ -3,35 +3,33 @@ package com.jroddev.android_oss_release_tracker.repo
 import com.android.volley.Request
 import com.android.volley.RequestQueue
 import com.android.volley.toolbox.StringRequest
-import org.w3c.dom.Element
-import org.xml.sax.InputSource
-import java.io.StringReader
 import java.net.URL
-import javax.xml.parsers.DocumentBuilderFactory
 
-// example: https://github.com/TeamNewPipe/NewPipe
-class GitHub : Repo {
+class GitHub : CommonRepo() {
 
-    override fun getOrgName(repoUrl: String): String {
-        val url = URL(repoUrl)
-        return url.path.split("/")[1]
+    override fun getBuildGradleUrl(org: String, app: String): String {
+        val dev = if (app.lowercase().contains("-ose")) "dev-ose" else "dev"
+        return "https://raw.githubusercontent.com/$org/$app/${dev}/app/build.gradle"
     }
 
-    // NewPipe
-    // from repo URL https://github.com/TeamNewPipe/NewPipe
-    override fun getApplicationName(repoUrl: String): String {
-        val url = URL(repoUrl)
-        return url.path.split("/")[2]
+    override fun getReadmeUrl(org: String, app: String): String {
+        return "https://raw.githubusercontent.com/$org/$app/master/README.md"
     }
 
-    // e.g. https://github.com/bitfireAT/davx5-ose/raw/dev-ose/app/src/main/res/mipmap-mdpi/ic_launcher.png
-    // e.g. https://github.com/TeamNewPipe/NewPipe/raw/dev/app/src/main/res/mipmap-mdpi/ic_launcher.png
-    override fun fetchIconUrl(repoUrl: String): String {
+    override fun getRssFeedUrl(org: String, app: String): String {
+        return "https://github.com/$org/$app/releases.atom"
+    }
+
+    override fun getIconUrl(repoUrl: String): String {
         val dev = if (repoUrl.lowercase().contains("-ose")) "dev-ose" else "dev"
         return "https://github.com/${getOrgName(repoUrl)}/${getApplicationName(repoUrl)}/raw/$dev/app/src/main/res/mipmap-mdpi/ic_launcher.png"
     }
 
 
+    override fun getOrgName(repoUrl: String): String {
+        val url = URL(repoUrl)
+        return url.path.split("/")[1]
+    }
 
     // org.schabi.newpipe
     // from https://raw.githubusercontent.com/TeamNewPipe/NewPipe/dev/app/build.gradle
