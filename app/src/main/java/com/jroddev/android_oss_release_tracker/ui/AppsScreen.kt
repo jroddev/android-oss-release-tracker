@@ -6,13 +6,12 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -40,15 +39,24 @@ fun AppsScreen(
     val ctx = LocalContext.current
     val verticalScroll = rememberScrollState()
     val repoUrls = remember {
-        PersistentState.getSavedTrackers(sharedPreferences)
+        val set =  mutableStateListOf<String>()
+        set.addAll(PersistentState.getSavedTrackers(sharedPreferences))
+        set
     }
 
     val onTrackerDelete = { appName: String, repo: String -> run {
         PersistentState.removeTracker(ctx, sharedPreferences, appName, repo)
-        // TODO: Refresh this page
+        repoUrls.remove(repo)
+        Unit
     }}
 
     Column(modifier = Modifier.verticalScroll(verticalScroll)) {
+        Text(
+            text = "Application Trackers",
+            fontSize = 24.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(0.dp, 20.dp)
+        )
         if (repoUrls.isEmpty()) {
             Text(text = "You aren't tracking any application repositories")
         }
@@ -100,9 +108,6 @@ fun ErroredTracker(metaData: RepoMetaData) {
 fun LoadedTracker(
     metaData: RepoMetaData
 ) {
-    // TODO: Add something more obvious that says "Update Available
-    val ctx = LocalContext.current
-
     Row(verticalAlignment = Alignment.CenterVertically) {
         AsyncImage(
             modifier = Modifier.size(50.dp, 50.dp),
