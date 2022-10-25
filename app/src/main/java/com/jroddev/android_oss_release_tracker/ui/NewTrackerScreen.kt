@@ -3,6 +3,8 @@ package com.jroddev.android_oss_release_tracker.ui
 import android.content.SharedPreferences
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -11,7 +13,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,6 +83,7 @@ fun NewTrackerScreen(
     requestQueue: RequestQueue
 ) {
     val ctx = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val repoInputBox = remember { mutableStateOf("") }
     val isTested = remember { mutableStateOf(false) }
 
@@ -90,7 +97,7 @@ fun NewTrackerScreen(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(0.dp, 20.dp)
         )
-        
+
         OutlinedTextField(
             modifier = Modifier
                 .fillMaxWidth()
@@ -101,7 +108,9 @@ fun NewTrackerScreen(
             onValueChange = {
                 repoInputBox.value = it.trim()
                 isTested.value = false
-            }
+            },
+            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done, keyboardType = KeyboardType.Password),
         )
 
         if (isTested.value) {

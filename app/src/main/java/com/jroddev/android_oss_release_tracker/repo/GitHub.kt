@@ -38,18 +38,61 @@ class GitHub : Repo {
     // applicationId "org.schabi.newpipe"
     override fun fetchPackageName(metaData: RepoMetaData, requestQueue: RequestQueue) {
         val dev = if (metaData.repoUrl.lowercase().contains("-ose")) "dev-ose" else "dev"
+        // TODO: This doesn't work for NextCloud News Android
         val url = "https://raw.githubusercontent.com/${getOrgName(metaData.repoUrl)}/${getApplicationName(metaData.repoUrl)}/${dev}/app/build.gradle"
         val request = StringRequest(Request.Method.GET, url,
             { response ->
-                val appId = response
-                    .lines()
-                    .find { it.contains("applicationId") }
-                    ?.replace("applicationId", "")
-                    ?.replace("\"", "")
-                    ?.trim()
-                println("APP ID: $appId")
-                metaData.packageName.value = appId
-                if (isLoaded(metaData) && metaData.state.value != MetaDataState.Errored) metaData.state.value = MetaDataState.Loaded
+                try {
+                    val appId = response
+                        .lines()
+                        .find { it.contains("applicationId") }
+                        ?.replace("applicationId", "")
+                        ?.replace("\"", "")
+                        ?.trim()
+                    println("APP ID: $appId")
+                    metaData.packageName.value = appId
+                    if (isLoaded(metaData) && metaData.state.value != MetaDataState.Errored) metaData.state.value = MetaDataState.Loaded
+                }  catch (e: Exception) {
+                    println(e)
+                    metaData.errors.add(e.localizedMessage ?: e.message ?: "Error occurred parsing $url")
+                    metaData.state.value = MetaDataState.Errored
+                }
+            },
+            { error ->
+                println(error)
+                metaData.errors.add(error.localizedMessage ?: error.message ?: "Error occurred fetching $url")
+//                metaData.state.value = MetaDataState.Errored
+                // Add the error to the list but don't fail yet. Try fallback option
+                fallbackPackageName(metaData, requestQueue)
+            })
+        requestQueue.add(request)
+    }
+
+    private fun fallbackPackageName(metaData: RepoMetaData, requestQueue: RequestQueue) {
+        // Many READMEs in these repositories have links to F-droid and those urls contain the package name
+        val url = "https://raw.githubusercontent.com/${getOrgName(metaData.repoUrl)}/${getApplicationName(metaData.repoUrl)}/master/README.md"
+        println("running fallbackPackageName. url: $url")
+        val request = StringRequest(Request.Method.GET, url,
+            { response ->
+                try {
+                    // \x2E = literal . (dot)
+                    // https://f-droid.org/<anything>/(letters).(letters).(letters)
+                    val appId = "https://f-droid.org/.*/([a-z]+[\\x2E][a-z]+[\\x2E][a-z]+)"
+                        .toRegex()
+                        .find(response)
+                        ?.groups
+                        ?.get(1)
+                        ?.value
+                    println("APP D: $appId")
+
+                    metaData.packageName.value = appId
+                    if (isLoaded(metaData) && metaData.state.value != MetaDataState.Errored) metaData.state.value =
+                        MetaDataState.Loaded
+                }  catch (e: Exception) {
+                    println(e)
+                    metaData.errors.add(e.localizedMessage ?: e.message ?: "Error occurred parsing $url")
+                    metaData.state.value = MetaDataState.Errored
+                }
             },
             { error ->
                 println(error)
@@ -57,6 +100,7 @@ class GitHub : Repo {
                 metaData.state.value = MetaDataState.Errored
             })
         requestQueue.add(request)
+
     }
 
 

@@ -4,7 +4,6 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,6 +44,7 @@ fun AppsScreen(
 
     val onTrackerDelete = { appName: String, repo: String -> run {
         PersistentState.removeTracker(ctx, sharedPreferences, appName, repo)
+        // TODO: Refresh this page
     }}
 
     Column(modifier = Modifier.verticalScroll(verticalScroll)) {
@@ -99,6 +99,7 @@ fun ErroredTracker(metaData: RepoMetaData) {
 fun LoadedTracker(
     metaData: RepoMetaData
 ) {
+    // TODO: Add something more obvious that says "Update Available
     val ctx = LocalContext.current
 
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -121,6 +122,7 @@ fun LoadedTracker(
                     && metaData.latestVersion.value!! <= metaData.installedVersion.value!!
             Text(
                 text = "latest: ${metaData.latestVersion.value ?: "<loading>"}",
+                // TODO: This is not visible on Dark Mode
                 color = if(!latestInstalled) Color.Blue else Color.Black
             )
             Text(text = metaData.latestVersionDate.value ?: "", fontSize = 12.sp)
