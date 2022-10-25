@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -117,13 +118,10 @@ fun LoadedTracker(
                 Text(text = "installed: ${metaData.installedVersion.value}")
             }
 
-            val latestInstalled = metaData.latestVersion.value != null
-                    && metaData.installedVersion.value != null
-                    && metaData.latestVersion.value!! <= metaData.installedVersion.value!!
+            val newVersionAvailable = metaData.installedVersion.value == null || (metaData.latestVersion.value ?: "") > (metaData.installedVersion.value ?: "")
             Text(
-                text = "latest: ${metaData.latestVersion.value ?: "<loading>"}",
-                // TODO: This is not visible on Dark Mode
-                color = if(!latestInstalled) Color.Blue else Color.Black
+                text = "latest: ${metaData.latestVersion.value ?: "<loading>"}${if (newVersionAvailable) " (NEW)" else ""}",
+                fontWeight = if (newVersionAvailable) FontWeight.ExtraBold else FontWeight.Normal
             )
             Text(text = metaData.latestVersionDate.value ?: "", fontSize = 12.sp)
         }
@@ -135,21 +133,6 @@ fun LoadedTracker(
             verticalArrangement = Arrangement.Bottom,
             horizontalAlignment = Alignment.Start
         ) {
-            // Make this a hyperlink on the latest version text to save space
-            if (metaData.latestVersionUrl.value != null) {
-                Button(
-                    modifier = Modifier.size(50.dp, 50.dp),
-                    shape = RoundedCornerShape(50.dp),
-                    onClick = {
-                    val urlIntent = Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse(metaData.latestVersionUrl.value)
-                    )
-                    ctx.startActivity(urlIntent)
-                }) {
-                    Icon(Icons.Default.ArrowForward, contentDescription = null)
-                }
-            }
             val packageNameValue = metaData.packageName.value
             if (packageNameValue != null) {
                 Text(
@@ -165,6 +148,7 @@ fun LoadedTracker(
 
 
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun RenderItem(
     packageManager: PackageManager,
@@ -172,6 +156,7 @@ fun RenderItem(
     repoUrl: String,
     onDelete: (String, String) -> Unit
 ) {
+    val ctx = LocalContext.current
     val metaData = remember { RepoMetaData(
         repoUrl,
         requestQueue
@@ -188,7 +173,15 @@ fun RenderItem(
         modifier = Modifier
             .defaultMinSize(0.dp, 90.dp)
             .fillMaxWidth()
-            .padding(0.dp, 5.dp)
+            .padding(0.dp, 5.dp),
+        onClick = {
+            val link = metaData.latestVersionUrl.value ?: metaData.repoUrl
+            val urlIntent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse(link)
+            )
+            ctx.startActivity(urlIntent)
+        }
     ) {
 
         Row {

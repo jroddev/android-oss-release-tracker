@@ -38,7 +38,6 @@ class GitHub : Repo {
     // applicationId "org.schabi.newpipe"
     override fun fetchPackageName(metaData: RepoMetaData, requestQueue: RequestQueue) {
         val dev = if (metaData.repoUrl.lowercase().contains("-ose")) "dev-ose" else "dev"
-        // TODO: This doesn't work for NextCloud News Android
         val url = "https://raw.githubusercontent.com/${getOrgName(metaData.repoUrl)}/${getApplicationName(metaData.repoUrl)}/${dev}/app/build.gradle"
         val request = StringRequest(Request.Method.GET, url,
             { response ->
