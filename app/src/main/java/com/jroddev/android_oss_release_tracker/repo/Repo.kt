@@ -57,10 +57,15 @@ interface Repo {
         fun new(repoUrl: String): Repo? =
             if (repoUrl.contains("github")) {
                 GitHub()
-//        } else if (repoUrl.contains("gitlab")) {
-//            GitLab(repoUrl)
+        } else if (repoUrl.contains("gitlab")) {
+                GitLab()
             } else {
                 null
             }
     }
 }
+
+
+
+
+

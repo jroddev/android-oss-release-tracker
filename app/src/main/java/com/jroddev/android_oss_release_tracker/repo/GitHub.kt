@@ -9,7 +9,7 @@ import java.io.StringReader
 import java.net.URL
 import javax.xml.parsers.DocumentBuilderFactory
 
-// https://github.com/TeamNewPipe/NewPipe
+// example: https://github.com/TeamNewPipe/NewPipe
 class GitHub : Repo {
 
     override fun getOrgName(repoUrl: String): String {
@@ -42,15 +42,10 @@ class GitHub : Repo {
         val request = StringRequest(Request.Method.GET, url,
             { response ->
                 try {
-                    val appId = response
-                        .lines()
-                        .find { it.contains("applicationId") }
-                        ?.replace("applicationId", "")
-                        ?.replace("\"", "")
-                        ?.trim()
+                    val appId = RepoHelpers.parsePackageNameFromBuildGradle(response)
                     println("APP ID: $appId")
                     metaData.packageName.value = appId
-                    if (isLoaded(metaData) && metaData.state.value != MetaDataState.Errored) metaData.state.value = MetaDataState.Loaded
+                    if (RepoHelpers.isLoaded(metaData) && metaData.state.value != MetaDataState.Errored) metaData.state.value = MetaDataState.Loaded
                 }  catch (e: Exception) {
                     println(e)
                     metaData.errors.add(e.localizedMessage ?: e.message ?: "Error occurred parsing $url")
@@ -60,7 +55,6 @@ class GitHub : Repo {
             { error ->
                 println(error)
                 metaData.errors.add(error.localizedMessage ?: error.message ?: "Error occurred fetching $url")
-//                metaData.state.value = MetaDataState.Errored
                 // Add the error to the list but don't fail yet. Try fallback option
                 fallbackPackageName(metaData, requestQueue)
             })
@@ -74,18 +68,12 @@ class GitHub : Repo {
         val request = StringRequest(Request.Method.GET, url,
             { response ->
                 try {
-                    // \x2E = literal . (dot)
-                    // https://f-droid.org/<anything>/(letters).(letters).(letters)
-                    val appId = "https://f-droid.org/.*/([a-z]+[\\x2E][a-z]+[\\x2E][a-z]+)"
-                        .toRegex()
-                        .find(response)
-                        ?.groups
-                        ?.get(1)
-                        ?.value
-                    println("APP D: $appId")
+
+                    val appId = RepoHelpers.parsePackageNameFromREADME(response)
+                    println("APP ID: $appId")
 
                     metaData.packageName.value = appId
-                    if (isLoaded(metaData) && metaData.state.value != MetaDataState.Errored) metaData.state.value =
+                    if (RepoHelpers.isLoaded(metaData) && metaData.state.value != MetaDataState.Errored) metaData.state.value =
                         MetaDataState.Loaded
                 }  catch (e: Exception) {
                     println(e)
@@ -99,41 +87,19 @@ class GitHub : Repo {
                 metaData.state.value = MetaDataState.Errored
             })
         requestQueue.add(request)
-
     }
 
-
-    // 0.24.0
-    // drop the 'v' prefix if exists
-    // from https://github.com/TeamNewPipe/NewPipe/releases.atom
-    // https://github.com/TeamNewPipe/NewPipe/releases/tag/v0.24.0
-    // derived from RSS
-    // entry.title and entry.link.href
     override fun fetchLatestVersion(metaData: RepoMetaData, requestQueue: RequestQueue) {
         val rss = "https://github.com/${getOrgName(metaData.repoUrl)}/${getApplicationName(metaData.repoUrl)}/releases.atom"
         println("getLatestVersion: $rss")
         val request = StringRequest(Request.Method.GET, rss,
             { response ->
                 try {
-                    val builderFactory = DocumentBuilderFactory.newInstance()
-                    val docBuilder = builderFactory.newDocumentBuilder()
-                    val inputSource = InputSource(StringReader(response))
-                    val doc = docBuilder.parse(inputSource)
-                    val feed = doc.getElementsByTagName("feed").item(0) as Element
-                    val entry = feed.getElementsByTagName("entry").item(0) as Element
-                    val title = entry.getElementsByTagName("title").item(0).textContent
-                    val updated = entry.getElementsByTagName("updated").item(0).textContent
-                    val updateLink = entry.getElementsByTagName("link")
-                        .item(0).attributes.getNamedItem("href").textContent
-
-                    metaData.latestVersion.value = if (title.startsWith('v'))
-                        title.substring(1)
-                    else
-                        title
-                    metaData.latestVersionDate.value = updated
-                    metaData.latestVersionUrl.value = updateLink
-
-                    if (isLoaded(metaData) && metaData.state.value != MetaDataState.Errored) metaData.state.value = MetaDataState.Loaded
+                    val parsed = RepoHelpers.parseRssValues(response)
+                    metaData.latestVersion.value = parsed.latestVersion
+                    metaData.latestVersionDate.value = parsed.latestVersionDate
+                    metaData.latestVersionUrl.value = parsed.latestVersionUrl
+                    if (RepoHelpers.isLoaded(metaData) && metaData.state.value != MetaDataState.Errored) metaData.state.value = MetaDataState.Loaded
                 } catch (e: Exception) {
                     metaData.errors.add(e.localizedMessage ?: e.message ?: "Exception thrown while parsing response from $rss")
                     metaData.state.value = MetaDataState.Errored
@@ -145,9 +111,5 @@ class GitHub : Repo {
                 metaData.state.value = MetaDataState.Errored
             })
         requestQueue.add(request)
-    }
-
-    private fun isLoaded(metaData: RepoMetaData): Boolean {
-        return metaData.packageName.value != null && metaData.latestVersion.value != null
     }
 }
