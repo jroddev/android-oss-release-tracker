@@ -56,11 +56,13 @@ fun TrackerPreview(
         .fillMaxWidth()
         .padding(10.dp, 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            AsyncImage(
-                modifier = Modifier.size(50.dp, 50.dp).padding(10.dp, 0.dp),
-                model = metaData.iconUrl,
-                contentDescription = null
-            )
+            if (metaData.iconUrl.value != null) {
+                AsyncImage(
+                    modifier = Modifier.size(50.dp, 50.dp).padding(10.dp, 0.dp),
+                    model = metaData.iconUrl.value,
+                    contentDescription = null
+                )
+            }
             Column(modifier = Modifier.padding(10.dp, 0.dp)) {
                 Text(text = metaData.appName)
                 Text(text = metaData.packageName.value ?: fallbackText)

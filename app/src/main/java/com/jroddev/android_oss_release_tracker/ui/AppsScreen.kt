@@ -90,7 +90,16 @@ fun ErroredTracker(metaData: RepoMetaData) {
     val bullet = "\u2022"
 
     Column(modifier = Modifier.padding(10.dp, 10.dp)) {
-        Text(text = metaData.repoUrl)
+        Row(modifier = Modifier.absolutePadding(right = 20.dp)) {
+            if (metaData.iconUrl.value != null) {
+                AsyncImage(
+                    modifier = Modifier.size(50.dp, 50.dp),
+                    model = metaData.iconUrl.value,
+                    contentDescription = null
+                )
+            }
+            Text(text = metaData.repoUrl)
+        }
         Button(onClick = { showErrors.value = !showErrors.value }) {
             Text(text = if (showErrors.value) "Hide Errors" else "Show Errors")
         }
@@ -109,11 +118,13 @@ fun LoadedTracker(
     metaData: RepoMetaData
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        AsyncImage(
-            modifier = Modifier.size(50.dp, 50.dp),
-            model = metaData.iconUrl,
-            contentDescription = null
-        )
+        if (metaData.iconUrl.value != null) {
+            AsyncImage(
+                modifier = Modifier.size(50.dp, 50.dp),
+                model = metaData.iconUrl.value,
+                contentDescription = null
+            )
+        }
         Column(modifier = Modifier.padding(Dp(15f), Dp(0f))) {
             Text(text = metaData.appName)
 

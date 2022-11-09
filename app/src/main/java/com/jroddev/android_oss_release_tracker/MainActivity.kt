@@ -15,8 +15,8 @@ import com.jroddev.android_oss_release_tracker.ui.BottomNavigationBar
 import com.jroddev.android_oss_release_tracker.ui.NavHostContainer
 import com.jroddev.android_oss_release_tracker.ui.theme.AndroidossreleasetrackerTheme
 
-
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

@@ -2,9 +2,11 @@ package com.jroddev.android_oss_release_tracker.repo
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import com.android.volley.Request
 import com.android.volley.RequestQueue
-import com.android.volley.toolbox.StringRequest
+import arrow.core.Either
+import kotlinx.coroutines.*
+import org.json.JSONArray
+import org.json.JSONObject
 import java.net.URL
 
 enum class MetaDataState {
@@ -14,16 +16,23 @@ enum class MetaDataState {
     Loaded
 }
 
+data class LatestVersionData(
+    val version: String,
+    val url: String,
+    val date: String
+)
+
 
 data class RepoMetaData(
     val repoUrl: String,
     val requestQueue: RequestQueue,
     ) {
+
     private val repo: Repo? = Repo.Helper.new(repoUrl)
     var orgName: String
     var appName: String
-    var iconUrl: String
     val state = mutableStateOf(MetaDataState.Unsupported)
+    var iconUrl = mutableStateOf<String?>(null)
     val packageName = mutableStateOf<String?>(null)
     val installedVersion = mutableStateOf<String?>(null)
     val latestVersion = mutableStateOf<String?>(null)
@@ -36,14 +45,56 @@ data class RepoMetaData(
             state.value = MetaDataState.Unsupported
             orgName = ""
             appName = ""
-            iconUrl = ""
         } else {
             state.value = MetaDataState.Loading
             orgName = repo.getOrgName(repoUrl)
             appName = repo.getApplicationName(repoUrl)
-            iconUrl = repo.getIconUrl(repoUrl)
-            repo.fetchPackageName(this, requestQueue)
-            repo.fetchLatestVersion(this, requestQueue)
+
+            val scope = CoroutineScope(Job() + Dispatchers.Main)
+            scope.launch {
+                println("Starting API calls for $repoUrl")
+                val defaultBranch = when (val result = repo.fetchBranchName(orgName, appName, requestQueue)) {
+                    is Either.Left -> result.value
+                    is Either.Right -> {
+                        errors.add(result.value.message ?: "failed to retrieve defaultBranch")
+                        state.value = MetaDataState.Errored
+                        "master"
+                    }
+                }
+                println("defaultBranch $defaultBranch")
+
+                iconUrl.value = repo.getIconUrl(repoUrl, defaultBranch)
+                println("iconUrl: ${iconUrl.value}")
+
+                packageName.value = when(val result = repo.fetchPackageName(orgName, appName, defaultBranch, requestQueue)) {
+                    is Either.Left -> {
+                        if (state.value != MetaDataState.Errored) {
+                            state.value = MetaDataState.Loaded
+                        }
+                        result.value
+                    }
+                    is Either.Right -> {
+                        errors.add(result.value.message ?: "failed to retrieve packageName")
+                        state.value = MetaDataState.Errored
+                        "<not found>"
+                    }
+                }
+                println("package Name: ${packageName.value}")
+
+                when(val result = repo.fetchLatestVersion(orgName, appName, requestQueue)) {
+                    is Either.Left -> {
+                        println("latestVersion: ${result.value}")
+                        latestVersion.value = result.value.version
+                        latestVersionDate.value = result.value.date
+                        latestVersionUrl.value = result.value.url
+                    }
+                    is Either.Right -> {
+                        errors.add(result.value.message ?: "failed to retrieve latestVersion")
+                        state.value = MetaDataState.Errored
+                    }
+                }
+            }
+
         }
     }
 }
@@ -52,9 +103,10 @@ data class RepoMetaData(
 interface Repo {
     fun getOrgName(repoUrl: String): String
     fun getApplicationName(repoUrl: String): String
-    fun getIconUrl(repoUrl: String): String
-    fun fetchPackageName(metaData: RepoMetaData, requestQueue: RequestQueue)
-    fun fetchLatestVersion(metaData: RepoMetaData, requestQueue: RequestQueue)
+    fun getIconUrl(repoUrl: String, branch: String): String
+    suspend fun fetchBranchName(org: String, app: String, requestQueue: RequestQueue): Either<String, Error>
+    suspend fun fetchPackageName(org: String, app: String, branch: String, requestQueue: RequestQueue): Either<String, Error>
+    suspend fun fetchLatestVersion(org: String, app: String, requestQueue: RequestQueue): Either<LatestVersionData, Error>
 
     object Helper {
         fun new(repoUrl: String): Repo? =
@@ -70,9 +122,12 @@ interface Repo {
 
 
 abstract class CommonRepo: Repo {
-    abstract fun getBuildGradleUrl(org: String, app: String): String
+    abstract fun getBranchesUrl(org: String, app: String): String
+    abstract fun getBuildGradleUrl(org: String, app: String, branch: String): String
     abstract fun getReadmeUrl(org: String, app: String): String
+    abstract fun getReleasesUrl(org: String, app: String): String
     abstract fun getRssFeedUrl(org: String, app: String): String
+    abstract fun parseReleasesJson(data: JSONArray): LatestVersionData
 
     // from repo URL https://gitlab.com/AuroraOSS/AuroraStore
     // returns AuroraOSS
@@ -88,81 +143,88 @@ abstract class CommonRepo: Repo {
         return url.path.split("/")[2]
     }
 
-    override fun fetchPackageName(metaData: RepoMetaData, requestQueue: RequestQueue) {
-        val url = getBuildGradleUrl(getOrgName(metaData.repoUrl), getApplicationName(metaData.repoUrl))
-        val request = StringRequest(
-            Request.Method.GET, url,
-            { response ->
+    override suspend fun fetchBranchName(org: String, app: String, requestQueue: RequestQueue): Either<String, Error> {
+        val url = getBranchesUrl(org, app)
+        return when (val response = ApiUtils.getJsonArray(url, requestQueue)) {
+            is Either.Left -> {
                 try {
-                    val appId = RepoHelpers.parsePackageNameFromBuildGradle(response)
-                    println("APP ID: $appId")
-                    metaData.packageName.value = appId
-                    if (RepoHelpers.isLoaded(metaData) && metaData.state.value != MetaDataState.Errored) metaData.state.value = MetaDataState.Loaded
-                }  catch (e: Exception) {
-                    println(e)
-                    metaData.errors.add(e.localizedMessage ?: e.message ?: "Error occurred parsing $url")
-                    metaData.state.value = MetaDataState.Errored
-                }
-            },
-            { error ->
-                println(error)
-                metaData.errors.add(error.localizedMessage ?: error.message ?: "Error occurred fetching $url")
-                // Add the error to the list but don't fail yet. Try fallback option
-                fallbackPackageName(metaData, requestQueue)
-            })
-        requestQueue.add(request)
-    }
-
-    private fun fallbackPackageName(metaData: RepoMetaData, requestQueue: RequestQueue) {
-        // Many READMEs in these repositories have links to F-droid and those urls contain the package name
-        val url = getReadmeUrl(getOrgName(metaData.repoUrl), getApplicationName(metaData.repoUrl))
-        println("running fallbackPackageName. url: $url")
-        val request = StringRequest(
-            Request.Method.GET, url,
-            { response ->
-                try {
-                    val appId = RepoHelpers.parsePackageNameFromREADME(response)
-                    println("APP ID: $appId")
-
-                    metaData.packageName.value = appId
-                    if (RepoHelpers.isLoaded(metaData) && metaData.state.value != MetaDataState.Errored) metaData.state.value =
-                        MetaDataState.Loaded
-                }  catch (e: Exception) {
-                    println(e)
-                    metaData.errors.add(e.localizedMessage ?: e.message ?: "Error occurred parsing $url")
-                    metaData.state.value = MetaDataState.Errored
-                }
-            },
-            { error ->
-                println(error)
-                metaData.errors.add(error.localizedMessage ?: error.message ?: "Error occurred fetching $url")
-                metaData.state.value = MetaDataState.Errored
-            })
-        requestQueue.add(request)
-    }
-
-    override fun fetchLatestVersion(metaData: RepoMetaData, requestQueue: RequestQueue) {
-        val rss = getRssFeedUrl(getOrgName(metaData.repoUrl), getApplicationName(metaData.repoUrl))
-        println("getLatestVersion: $rss")
-        val request = StringRequest(
-            Request.Method.GET, rss,
-            { response ->
-                try {
-                    val parsed = RepoHelpers.parseRssValues(response)
-                    metaData.latestVersion.value = parsed.latestVersion
-                    metaData.latestVersionDate.value = parsed.latestVersionDate
-                    metaData.latestVersionUrl.value = parsed.latestVersionUrl
-                    if (RepoHelpers.isLoaded(metaData) && metaData.state.value != MetaDataState.Errored) metaData.state.value = MetaDataState.Loaded
+                    Either.Left((response.value.get(0) as JSONObject).getString("name"))
                 } catch (e: Exception) {
-                    metaData.errors.add(e.localizedMessage ?: e.message ?: "Exception thrown while parsing response from $rss")
-                    metaData.state.value = MetaDataState.Errored
+                    println(e)
+                    Either.Right(Error("Could not parse result of fetchBranchName api call"))
                 }
-            },
-            { error ->
-                println(error)
-                metaData.errors.add(error.localizedMessage ?: error.message ?: "Error occurred fetching $rss")
-                metaData.state.value = MetaDataState.Errored
-            })
-        requestQueue.add(request)
+            }
+            is Either.Right -> {
+                println(response.value)
+                Either.Right(Error(response.value))
+            }
+        }
+    }
+
+    override suspend fun fetchPackageName(org: String, app: String, branch: String, requestQueue: RequestQueue): Either<String, Error> {
+        return try {
+            val firstUrl = getBuildGradleUrl(org, app, branch)
+            val firstAttempt = when (val response = ApiUtils.get(firstUrl, requestQueue)) {
+                is Either.Left -> {
+
+                        val appId = RepoHelpers.parsePackageNameFromBuildGradle(response.value)
+                        if (appId.isNullOrEmpty()) {
+                            throw Error("Error occurred parsing $firstUrl")
+                        } else {
+                            Either.Left(appId)
+                        }
+                }
+                is Either.Right -> {
+                    println(response.value)
+                    Either.Right(Error(response.value))
+                }
+            }
+
+            when(firstAttempt) {
+                is Either.Left -> return firstAttempt
+                is Either.Right -> {
+                    // Try fallback method
+                    // Some READMEs in these repositories have links to F-droid and those urls contain the package name
+                    val fallbackUrl = getReadmeUrl(org, app,)
+                    when (val response = ApiUtils.get(fallbackUrl, requestQueue)) {
+                        is Either.Left -> {
+                            val appId = RepoHelpers.parsePackageNameFromREADME(response.value)
+                            if (appId.isNullOrEmpty()) {
+                                throw Error("Error occurred parsing $firstUrl")
+                            } else {
+                                Either.Left(appId)
+                            }
+                        }
+                        is Either.Right -> {
+                            println(response.value)
+                            Either.Right(Error(response.value))
+                        }
+                    }
+                }
+            }
+        }  catch (e: Exception) {
+            val msg = e.localizedMessage ?: e.message ?: "Error occurred fetching PackageName"
+            println(msg)
+            Either.Right(Error(msg))
+        }
+    }
+
+    override suspend fun fetchLatestVersion(org: String, app: String, requestQueue: RequestQueue): Either<LatestVersionData, Error> {
+        val url = getReleasesUrl(org, app)
+        return when (val response = ApiUtils.getJsonArray(url, requestQueue)) {
+            is Either.Left -> {
+                try {
+                    val parsed = parseReleasesJson(response.value)
+                    Either.Left(parsed)
+                } catch (e: Exception) {
+                    println(e)
+                    Either.Right(Error("Could not parse result of fetchLatestVersion api call"))
+                }
+            }
+            is Either.Right -> {
+                println(response.value)
+                Either.Right(Error(response.value))
+            }
+        }
     }
 }
