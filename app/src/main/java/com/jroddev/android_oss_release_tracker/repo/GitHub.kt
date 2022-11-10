@@ -4,12 +4,23 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class GitHub : CommonRepo() {
-    override fun getBranchesUrl(org: String, app: String): String {
-        return "https://api.github.com/repos/$org/$app/branches"
+
+    override fun getUrlOfRawFile(org: String, app: String, branch: String, filepath: String): String {
+        return "https://raw.githubusercontent.com/$org/$app/$branch/$filepath"
     }
 
-    override fun getBuildGradleUrl(org: String, app: String, branch: String): String {
-        return "https://raw.githubusercontent.com/$org/$app/$branch/app/build.gradle"
+    override fun getFileMetaDataUrl(
+        org: String,
+        app: String,
+        branch: String,
+        file: String
+    ): String {
+        // https://api.github.com/repos/ImranR98/Obtainium/contents/android/app
+        return "https://api.github.com/repos/$org/$app/contents/$file"
+    }
+
+    override fun getRepoMetaDataUrl(org: String, app: String): String {
+        return "https://api.github.com/repos/$org/$app"
     }
 
     override fun getReadmeUrl(org: String, app: String): String {
@@ -41,7 +52,7 @@ class GitHub : CommonRepo() {
         )
     }
 
-    override fun getIconUrl(repoUrl: String, branch: String): String {
-        return "https://github.com/${getOrgName(repoUrl)}/${getApplicationName(repoUrl)}/raw/$branch/app/src/main/res/mipmap-mdpi/ic_launcher.png"
+    override fun getIconUrl(repoUrl: String, branch: String, androidRoot: String): String {
+        return "https://github.com/${getOrgName(repoUrl)}/${getApplicationName(repoUrl)}/raw/$branch/$androidRoot/src/main/res/mipmap-mdpi/ic_launcher.png"
     }
 }

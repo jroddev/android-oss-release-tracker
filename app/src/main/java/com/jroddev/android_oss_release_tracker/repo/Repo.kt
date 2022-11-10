@@ -6,7 +6,6 @@ import com.android.volley.RequestQueue
 import arrow.core.Either
 import kotlinx.coroutines.*
 import org.json.JSONArray
-import org.json.JSONObject
 import java.net.URL
 
 enum class MetaDataState {
@@ -28,10 +27,11 @@ data class RepoMetaData(
     val requestQueue: RequestQueue,
     ) {
 
-    private val repo: Repo? = Repo.Helper.new(repoUrl)
+    val repo: Repo? = Repo.Helper.new(repoUrl)
     var orgName: String
     var appName: String
     val state = mutableStateOf(MetaDataState.Unsupported)
+    var defaultBranch: String? = null
     var iconUrl = mutableStateOf<String?>(null)
     val packageName = mutableStateOf<String?>(null)
     val installedVersion = mutableStateOf<String?>(null)
@@ -53,7 +53,7 @@ data class RepoMetaData(
             val scope = CoroutineScope(Job() + Dispatchers.Main)
             scope.launch {
                 println("Starting API calls for $repoUrl")
-                val defaultBranch = when (val result = repo.fetchBranchName(orgName, appName, requestQueue)) {
+                defaultBranch = when (val result = repo.fetchBranchName(orgName, appName, requestQueue)) {
                     is Either.Left -> result.value
                     is Either.Right -> {
                         errors.add(result.value.message ?: "failed to retrieve defaultBranch")
@@ -63,20 +63,19 @@ data class RepoMetaData(
                 }
                 println("defaultBranch $defaultBranch")
 
-                iconUrl.value = repo.getIconUrl(repoUrl, defaultBranch)
+                val androidRoot = repo.tryDetermineAndroidRoot(orgName, appName,
+                    defaultBranch!!, requestQueue)
+
+                iconUrl.value = repo.getIconUrl(repoUrl, defaultBranch!!, androidRoot)
                 println("iconUrl: ${iconUrl.value}")
 
-                packageName.value = when(val result = repo.fetchPackageName(orgName, appName, defaultBranch, requestQueue)) {
-                    is Either.Left -> {
-                        if (state.value != MetaDataState.Errored) {
-                            state.value = MetaDataState.Loaded
-                        }
-                        result.value
-                    }
-                    is Either.Right -> {
-                        errors.add(result.value.message ?: "failed to retrieve packageName")
-                        state.value = MetaDataState.Errored
-                        "<not found>"
+                packageName.value = PackageNameResolver.tryResolve(this@RepoMetaData, requestQueue)
+                if (packageName.value == null) {
+                    state.value = MetaDataState.Errored
+                    packageName.value = "<not found>"
+                } else {
+                    if (state.value != MetaDataState.Errored) {
+                        state.value = MetaDataState.Loaded
                     }
                 }
                 println("package Name: ${packageName.value}")
@@ -103,10 +102,12 @@ data class RepoMetaData(
 interface Repo {
     fun getOrgName(repoUrl: String): String
     fun getApplicationName(repoUrl: String): String
-    fun getIconUrl(repoUrl: String, branch: String): String
+    fun getIconUrl(repoUrl: String, branch: String, androidRoot: String): String
+    fun getUrlOfRawFile(org: String, app: String, branch: String, filepath: String): String
     suspend fun fetchBranchName(org: String, app: String, requestQueue: RequestQueue): Either<String, Error>
-    suspend fun fetchPackageName(org: String, app: String, branch: String, requestQueue: RequestQueue): Either<String, Error>
     suspend fun fetchLatestVersion(org: String, app: String, requestQueue: RequestQueue): Either<LatestVersionData, Error>
+    suspend fun tryDetermineAndroidRoot(org: String, app: String, branch: String, requestQueue: RequestQueue): String
+
 
     object Helper {
         fun new(repoUrl: String): Repo? =
@@ -122,8 +123,9 @@ interface Repo {
 
 
 abstract class CommonRepo: Repo {
-    abstract fun getBranchesUrl(org: String, app: String): String
-    abstract fun getBuildGradleUrl(org: String, app: String, branch: String): String
+
+    abstract fun getFileMetaDataUrl(org: String, app: String, branch: String, file: String): String
+    abstract fun getRepoMetaDataUrl(org: String, app: String): String
     abstract fun getReadmeUrl(org: String, app: String): String
     abstract fun getReleasesUrl(org: String, app: String): String
     abstract fun getRssFeedUrl(org: String, app: String): String
@@ -144,11 +146,11 @@ abstract class CommonRepo: Repo {
     }
 
     override suspend fun fetchBranchName(org: String, app: String, requestQueue: RequestQueue): Either<String, Error> {
-        val url = getBranchesUrl(org, app)
-        return when (val response = ApiUtils.getJsonArray(url, requestQueue)) {
+        val url = getRepoMetaDataUrl(org, app)
+        return when (val response = ApiUtils.getJsonObject(url, requestQueue)) {
             is Either.Left -> {
                 try {
-                    Either.Left((response.value.get(0) as JSONObject).getString("name"))
+                    Either.Left(response.value.getString("default_branch"))
                 } catch (e: Exception) {
                     println(e)
                     Either.Right(Error("Could not parse result of fetchBranchName api call"))
@@ -158,54 +160,6 @@ abstract class CommonRepo: Repo {
                 println(response.value)
                 Either.Right(Error(response.value))
             }
-        }
-    }
-
-    override suspend fun fetchPackageName(org: String, app: String, branch: String, requestQueue: RequestQueue): Either<String, Error> {
-        return try {
-            val firstUrl = getBuildGradleUrl(org, app, branch)
-            val firstAttempt = when (val response = ApiUtils.get(firstUrl, requestQueue)) {
-                is Either.Left -> {
-
-                        val appId = RepoHelpers.parsePackageNameFromBuildGradle(response.value)
-                        if (appId.isNullOrEmpty()) {
-                            throw Error("Error occurred parsing $firstUrl")
-                        } else {
-                            Either.Left(appId)
-                        }
-                }
-                is Either.Right -> {
-                    println(response.value)
-                    Either.Right(Error(response.value))
-                }
-            }
-
-            when(firstAttempt) {
-                is Either.Left -> return firstAttempt
-                is Either.Right -> {
-                    // Try fallback method
-                    // Some READMEs in these repositories have links to F-droid and those urls contain the package name
-                    val fallbackUrl = getReadmeUrl(org, app,)
-                    when (val response = ApiUtils.get(fallbackUrl, requestQueue)) {
-                        is Either.Left -> {
-                            val appId = RepoHelpers.parsePackageNameFromREADME(response.value)
-                            if (appId.isNullOrEmpty()) {
-                                throw Error("Error occurred parsing $firstUrl")
-                            } else {
-                                Either.Left(appId)
-                            }
-                        }
-                        is Either.Right -> {
-                            println(response.value)
-                            Either.Right(Error(response.value))
-                        }
-                    }
-                }
-            }
-        }  catch (e: Exception) {
-            val msg = e.localizedMessage ?: e.message ?: "Error occurred fetching PackageName"
-            println(msg)
-            Either.Right(Error(msg))
         }
     }
 
@@ -226,5 +180,17 @@ abstract class CommonRepo: Repo {
                 Either.Right(Error(response.value))
             }
         }
+    }
+
+    override suspend fun tryDetermineAndroidRoot(org: String, app: String, branch: String, requestQueue: RequestQueue): String {
+        val candidates = listOf("app", "android/app")
+        candidates.forEach { candidate ->
+            if (ApiUtils.get(getFileMetaDataUrl(org, app, branch, "$candidate/build.gradle"), requestQueue).isLeft()) {
+                println("Android Root for $org/$app detected as $candidate")
+                return candidate
+            }
+        }
+        println("Android Root for $org/$app not found")
+        return ""
     }
 }

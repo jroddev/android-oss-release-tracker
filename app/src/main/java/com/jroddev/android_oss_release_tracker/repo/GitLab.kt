@@ -2,14 +2,29 @@ package com.jroddev.android_oss_release_tracker.repo
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.URLEncoder
 
 class GitLab : CommonRepo() {
-    override fun getBranchesUrl(org: String, app: String): String {
-        return "https://gitlab.com/api/v4/projects/$org%2F$app/repository/branches"
+
+    override fun getUrlOfRawFile(org: String, app: String, branch: String, filepath: String): String {
+        return "https://gitlab.com/$org/$app/-/raw/$branch/$filepath"
     }
 
-    override fun getBuildGradleUrl(org: String, app: String, branch: String): String {
-        return  "https://gitlab.com/$org/$app/-/raw/$branch/app/build.gradle"
+    override fun getFileMetaDataUrl(
+        org: String,
+        app: String,
+        branch: String,
+        file: String
+    ): String {
+        // https://gitlab.com/api/v4/projects/AuroraOSS%2FAuroraStore/repository/files/app%2Fbuild.gradle?ref=master
+        val repoEncoded = URLEncoder.encode("$org/$app", "utf-8")
+        val fileEncoded = URLEncoder.encode(file, "utf-8")
+
+        return "https://gitlab.com/api/v4/projects/$repoEncoded/repository/files/$fileEncoded?ref=$branch"
+    }
+
+    override fun getRepoMetaDataUrl(org: String, app: String): String {
+        return "https://gitlab.com/api/v4/projects/$org%2F$app"
     }
 
     override fun getReadmeUrl(org: String, app: String): String {
@@ -41,7 +56,7 @@ class GitLab : CommonRepo() {
         )
     }
 
-    override fun getIconUrl(repoUrl: String, branch: String): String {
-        return "https://gitlab.com/${getOrgName(repoUrl)}/${getApplicationName(repoUrl)}/-/raw/$branch/app/src/main/res/mipmap-mdpi/ic_launcher.png"
+    override fun getIconUrl(repoUrl: String, branch: String, androidRoot: String): String {
+        return "https://gitlab.com/${getOrgName(repoUrl)}/${getApplicationName(repoUrl)}/-/raw/$branch/$androidRoot/src/main/res/mipmap-mdpi/ic_launcher.png"
     }
 }

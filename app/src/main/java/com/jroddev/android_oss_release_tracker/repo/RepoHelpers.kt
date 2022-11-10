@@ -2,6 +2,7 @@ package com.jroddev.android_oss_release_tracker.repo
 
 object RepoHelpers {
 
+    const val REVERSE_DOMAIN_STRING_REGEX = "\"([A-Za-z]+[\\x2E][A-Za-z]+[\\x2E][A-Za-z]+)\""
     fun parsePackageNameFromBuildGradle(buildGradleContent: String): String? =  buildGradleContent
         .lines()
         .find { it.contains("applicationId") }
