@@ -39,15 +39,23 @@ object PackageNameResolver {
         return null
     }
 
+    // Filter out some common lines that can confuse the parser
+    private fun cleanFile(input: String): String =
+        input.lines().filter {
+            !it.contains("apply ") &&
+            !it.contains("mplementation ")
+        }.joinToString("\n")
+
 
     private fun tryParseFile(content: String): String? {
+        val cleanedContent = cleanFile(content)
         val parsers = listOf(
             { input: String -> PackageNameParsers.tryFindApplicationId(input) },
             { input: String -> PackageNameParsers.tryFindReverseDomain(input) },
             { input: String -> PackageNameParsers.tryFindFdroidLink(input) },
         )
         parsers.forEach { parser ->
-            val result = parser(content)
+            val result = parser(cleanedContent)
             if (result != null) {
                 return result
             }
@@ -61,7 +69,8 @@ object PackageNameParsers {
 
     // \x2E = literal . (dot)
     // "(letters).(letters).(letters)" e.g. "com.jroddev.android-oss-release-tracker"
-    val REVERSE_DOMAIN_STRING_REGEX = "\"([A-Za-z]+[\\x2E][A-Za-z]+[\\x2E][A-Za-z]+)\"".toRegex()
+    // letters also includes - and _ in this case
+    val REVERSE_DOMAIN_STRING_REGEX = ".*[\"']([A-Za-z-_]+[\\x2E][A-Za-z-_]+[\\x2E][A-Za-z-_]+)[\"'].*".toRegex()
 
     // \x2E = literal . (dot)
     // https://f-droid.org/<anything>/(letters).(letters).(letters)
@@ -69,9 +78,14 @@ object PackageNameParsers {
 
     fun tryFindApplicationId(content: String): String? = content
         .lines()
-        .find { it.contains("applicationId") && REVERSE_DOMAIN_STRING_REGEX.matches(it) }
+        .find {
+            it.contains("applicationId ") &&
+            !it.contains("apply ") &&
+            REVERSE_DOMAIN_STRING_REGEX.matches(it)
+        }
         ?.replace("applicationId", "")
         ?.replace("\"", "")
+        ?.replace("\'", "")
         ?.trim()
 
     fun tryFindReverseDomain(content: String): String? = REVERSE_DOMAIN_STRING_REGEX
