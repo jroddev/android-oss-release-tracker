@@ -8,7 +8,7 @@ object PackageNameResolver {
     suspend fun tryResolve(data: RepoMetaData, requestQueue: RequestQueue): String? {
         val filesToCheck = listOf(
             "${data.androidRoot}/build.gradle",
-            "README.md"
+//            "README.md"
         )
 
         filesToCheck.forEach { file ->
@@ -73,10 +73,11 @@ object PackageNameParsers {
     // \x2E = literal . (dot)
     // "(letters).(letters).(letters)" e.g. "com.jroddev.android-oss-release-tracker"
     // letters also includes - and _ in this case
-    val REVERSE_DOMAIN_STRING_REGEX = ".*[\"']([A-Za-z-_]+[\\x2E][A-Za-z-_]+[\\x2E][A-Za-z-_]+)[\"'].*".toRegex()
+//    val REVERSE_DOMAIN_STRING_REGEX = ".*[\"']([A-Za-z-_]+[\\x2E][A-Za-z-_]+[\\x2E][A-Za-z-_]+)[\"'].*".toRegex()
 
     // experiment for packages with more or less componenets e.g. io.github.muntashirakon.AppManager or com.gh4a
-    //    val REVERSE_DOMAIN_STRING_REGEX = ".*[\"']([A-Za-z-_]+(?:[\\x2E][A-Za-z0-9-_]+)+)[\"']\\s*".toRegex()
+    // <anything><" or '>(<two or more letters>.<<two or more letters, numbers, - or _> one or more times>
+    val REVERSE_DOMAIN_STRING_REGEX = ".*[\"']([A-Za-z]{2,}(?:\\x2E[A-Za-z0-9-_]{2,})+)[\"']\\s*".toRegex()
 
 
     // \x2E = literal . (dot)
