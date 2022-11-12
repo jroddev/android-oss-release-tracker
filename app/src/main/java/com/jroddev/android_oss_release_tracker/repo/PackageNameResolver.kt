@@ -7,8 +7,7 @@ object PackageNameResolver {
 
     suspend fun tryResolve(data: RepoMetaData, requestQueue: RequestQueue): String? {
         val filesToCheck = listOf(
-            "app/build.gradle",
-            "android/app/build.gradle",
+            "${data.androidRoot}/build.gradle",
             "README.md"
         )
 
@@ -17,16 +16,17 @@ object PackageNameResolver {
                 val url = data.repo!!.getUrlOfRawFile(data.orgName, data.appName, data.defaultBranch!!, file)
                 when (val content = ApiUtils.get(url, requestQueue)) {
                     is Either.Left -> {
+                        println("success retrieving url: ${content.value}")
                         val result = tryParseFile(content.value)
                         if (result == null) {
                             println("Exhausted parsers trying to determine packageName for $url")
+                        } else {
+                            return result
                         }
-                        return result
                     }
                     is Either.Right -> {
                         println("Exception retrieving $url")
                         data.errors.add(content.value.toString())
-
                     }
                 }
             } catch (e: Exception) {
@@ -43,7 +43,9 @@ object PackageNameResolver {
     private fun cleanFile(input: String): String =
         input.lines().filter {
             !it.contains("apply ") &&
-            !it.contains("mplementation ")
+            !it.contains("mplementation ") &&
+            !it.contains("group: ") &&
+            !"[ \\t]*id .*".toRegex().matches(it)
         }.joinToString("\n")
 
 
@@ -56,6 +58,7 @@ object PackageNameResolver {
         )
         parsers.forEach { parser ->
             val result = parser(cleanedContent)
+            println("cleanedContent: $cleanedContent")
             if (result != null) {
                 return result
             }
@@ -72,15 +75,18 @@ object PackageNameParsers {
     // letters also includes - and _ in this case
     val REVERSE_DOMAIN_STRING_REGEX = ".*[\"']([A-Za-z-_]+[\\x2E][A-Za-z-_]+[\\x2E][A-Za-z-_]+)[\"'].*".toRegex()
 
+    // experiment for packages with more or less componenets e.g. io.github.muntashirakon.AppManager or com.gh4a
+    //    val REVERSE_DOMAIN_STRING_REGEX = ".*[\"']([A-Za-z-_]+(?:[\\x2E][A-Za-z0-9-_]+)+)[\"']\\s*".toRegex()
+
+
     // \x2E = literal . (dot)
-    // https://f-droid.org/<anything>/(letters).(letters).(letters)
-    val FDROID_REGEX =  "https://f-droid.org/.*/([a-z]+[\\x2E][a-z]+[\\x2E][a-z]+)".toRegex()
+    // https://f-droid.org/<anything>/(letters, numbers).(letters, numbers, dot)
+    val FDROID_REGEX =  "https://f-droid.org/.*/([A-Za-z0-9]+\\x2E[A-Za-z0-9\\x2E]+)".toRegex()
 
     fun tryFindApplicationId(content: String): String? = content
         .lines()
         .find {
             it.contains("applicationId ") &&
-            !it.contains("apply ") &&
             REVERSE_DOMAIN_STRING_REGEX.matches(it)
         }
         ?.replace("applicationId", "")

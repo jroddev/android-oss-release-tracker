@@ -32,6 +32,7 @@ data class RepoMetaData(
     var appName: String
     val state = mutableStateOf(MetaDataState.Unsupported)
     var defaultBranch: String? = null
+    var androidRoot: String? = "app"
     var iconUrl = mutableStateOf<String?>(null)
     val packageName = mutableStateOf<String?>(null)
     val installedVersion = mutableStateOf<String?>(null)
@@ -63,10 +64,10 @@ data class RepoMetaData(
                 }
                 println("defaultBranch $defaultBranch")
 
-                val androidRoot = repo.tryDetermineAndroidRoot(orgName, appName,
+                androidRoot = repo.tryDetermineAndroidRoot(orgName, appName,
                     defaultBranch!!, requestQueue)
 
-                iconUrl.value = repo.getIconUrl(repoUrl, defaultBranch!!, androidRoot)
+                iconUrl.value = repo.getIconUrl(repoUrl, defaultBranch!!, androidRoot!!)
                 println("iconUrl: ${iconUrl.value}")
 
                 packageName.value = PackageNameResolver.tryResolve(this@RepoMetaData, requestQueue)
@@ -130,6 +131,10 @@ abstract class CommonRepo: Repo {
     abstract fun getReleasesUrl(org: String, app: String): String
     abstract fun getRssFeedUrl(org: String, app: String): String
     abstract fun parseReleasesJson(data: JSONArray): LatestVersionData
+
+    // Strip everything before the first number. Then any non-whitespace character is allowed
+    val VERSION_NAME_REGEX = "([0-9]+\\S*)".toRegex()
+    fun cleanVersionName(input: String): String = VERSION_NAME_REGEX.find(input)?.groups?.get(0)?.value ?: "unknown"
 
     // from repo URL https://gitlab.com/AuroraOSS/AuroraStore
     // returns AuroraOSS

@@ -38,15 +38,8 @@ class GitHub : CommonRepo() {
     override fun parseReleasesJson(data: JSONArray): LatestVersionData {
         val firstEntry = data.get(0) as JSONObject
 
-        // strip leading v from versions like v1.0.0
-        val rawVersionString = firstEntry.getString("name")
-        val latestVersion = if (rawVersionString.startsWith('v'))
-            rawVersionString.substring(1)
-        else
-            rawVersionString
-
         return LatestVersionData(
-            version = latestVersion,
+            version = cleanVersionName(firstEntry.getString("name")),
             url = firstEntry.getString("html_url"),
             date = firstEntry.getString("published_at")
         )
