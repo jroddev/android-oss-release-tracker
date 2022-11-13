@@ -10,7 +10,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -58,18 +57,12 @@ fun NavHostContainer(
         startDestination = "apps",
         modifier = Modifier.padding(paddingValues = padding),
         builder = {
-
-            // route : Home
             composable("apps") {
                 AppsScreen(packageManager, sharedPreferences, requestQueue)
             }
-
-            // route : search
             composable("new") {
                 NewTrackerScreen(sharedPreferences, requestQueue)
             }
-
-            // route : profile
             composable("settings") {
                 SettingsScreen()
             }

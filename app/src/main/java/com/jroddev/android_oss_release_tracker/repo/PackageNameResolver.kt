@@ -8,7 +8,7 @@ object PackageNameResolver {
     suspend fun tryResolve(data: RepoMetaData, requestQueue: RequestQueue): String? {
         val filesToCheck = listOf(
             "${data.androidRoot}/build.gradle",
-//            "README.md"
+            "README.md"
         )
 
         filesToCheck.forEach { file ->
@@ -16,7 +16,6 @@ object PackageNameResolver {
                 val url = data.repo!!.getUrlOfRawFile(data.orgName, data.appName, data.defaultBranch!!, file)
                 when (val content = ApiUtils.get(url, requestQueue)) {
                     is Either.Left -> {
-                        println("success retrieving url: ${content.value}")
                         val result = tryParseFile(content.value)
                         if (result == null) {
                             println("Exhausted parsers trying to determine packageName for $url")
@@ -25,13 +24,13 @@ object PackageNameResolver {
                         }
                     }
                     is Either.Right -> {
-                        println("Exception retrieving $url")
-                        data.errors.add(content.value.toString())
+                        println("Exception retrieving $url ${content.value}")
+                        data.errors.add(content.value.message ?: content.value.toString())
                     }
                 }
             } catch (e: Exception) {
                 println("Exception through trying to parse $file")
-                data.errors.add(e.toString())
+                data.errors.add(e.message ?: e.toString())
             }
         }
 
@@ -58,7 +57,6 @@ object PackageNameResolver {
         )
         parsers.forEach { parser ->
             val result = parser(cleanedContent)
-            println("cleanedContent: $cleanedContent")
             if (result != null) {
                 return result
             }
