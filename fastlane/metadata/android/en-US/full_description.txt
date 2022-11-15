@@ -1,0 +1,7 @@
+<i>Android OSS Release Tracker</i> lets you keep track of updates to Open Source Applications directly from their resp. repositories.
+
+The application uses the <code>QUERY_ALL_PACKAGES</code> permission in order to fetch the currently installed version of each app in the tracker to compare against.
+
+* Subscribe to Android OSS repositories (GitHub and GitLab)
+* Compare versions with what you have installed on the device
+* Opens new version in browser for you to install yourself
