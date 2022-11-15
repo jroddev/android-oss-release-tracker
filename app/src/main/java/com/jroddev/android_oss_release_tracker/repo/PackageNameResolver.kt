@@ -44,6 +44,7 @@ object PackageNameResolver {
             !it.contains("apply ") &&
             !it.contains("mplementation ") &&
             !it.contains("group: ") &&
+            !it.contains("local.properties") &&
             !"[ \\t]*id .*".toRegex().matches(it)
         }.joinToString("\n")
 
