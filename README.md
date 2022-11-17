@@ -5,6 +5,8 @@
 - Compare versions with what you have installed on the device
 - Opens new version in browser for you to install yourself
 
+<p align="left"><a href="https://apt.izzysoft.de/fdroid/index/apk/com.jroddev.android_oss_release_tracker"><img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" height=80/></a></p>
+
 ---
 
 ### WARNING
