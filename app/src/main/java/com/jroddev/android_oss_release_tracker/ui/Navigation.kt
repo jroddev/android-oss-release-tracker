@@ -48,7 +48,6 @@ fun NavHostContainer(
     navController: NavHostController,
     padding: PaddingValues,
     sharedPreferences: SharedPreferences,
-    packageManager: PackageManager,
     requestQueue: RequestQueue
 ) {
 
@@ -58,7 +57,7 @@ fun NavHostContainer(
         modifier = Modifier.padding(paddingValues = padding),
         builder = {
             composable("apps") {
-                AppsScreen(packageManager, sharedPreferences, requestQueue)
+                AppsScreen(sharedPreferences, requestQueue)
             }
             composable("new") {
                 NewTrackerScreen(sharedPreferences, requestQueue)

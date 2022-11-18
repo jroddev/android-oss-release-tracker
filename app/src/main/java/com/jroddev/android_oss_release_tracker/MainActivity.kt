@@ -44,7 +44,6 @@ class MainActivity : ComponentActivity() {
                                 navController = navController,
                                 padding = padding,
                                 sharedPreferences,
-                                packageManager,
                                 requestQueue
                             )
                         }

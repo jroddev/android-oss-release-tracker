@@ -1,8 +1,8 @@
 package com.jroddev.android_oss_release_tracker.ui
 
+import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
-import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -32,7 +32,6 @@ import com.jroddev.android_oss_release_tracker.repo.RepoMetaData
 
 @Composable
 fun AppsScreen(
-    packageManager: PackageManager,
     sharedPreferences: SharedPreferences,
     requestQueue: RequestQueue
 ) {
@@ -62,7 +61,6 @@ fun AppsScreen(
         }
         repoUrls.forEach { url -> run {
             RenderItem(
-                packageManager,
                 requestQueue,
                 url,
                 onTrackerDelete)
@@ -73,7 +71,7 @@ fun AppsScreen(
 
 @Composable
 fun UnsupportedTracker(metaData: RepoMetaData) {
-    Text(text = "${metaData.repoUrl} could not be parsed or is not supported")
+    Text(text = "[${metaData.repoUrl}] could not be parsed or is not supported")
 }
 
 @Composable
@@ -167,7 +165,6 @@ fun LoadedTracker(
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun RenderItem(
-    packageManager: PackageManager,
     requestQueue: RequestQueue,
     repoUrl: String,
     onDelete: (String, String) -> Unit
@@ -179,7 +176,7 @@ fun RenderItem(
     ) }
 
     if (metaData.installedVersion.value == null && metaData.packageName.value != null) {
-        metaData.installedVersion.value = packageManager
+        metaData.installedVersion.value = (ctx as Activity).packageManager
             .getInstalledPackages(0)
             .find { it.packageName == metaData.packageName.value }
             ?.versionName ?: "not installed"

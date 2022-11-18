@@ -20,10 +20,24 @@ object PersistentState {
         val newList = mutableSetOf<String>()
         newList.addAll(existing)
         newList.add(repo)
+        newList.remove("")
         val editor = sharedPreferences.edit()
         editor.putStringSet("app_trackers", newList)
         editor.apply()
         Toast.makeText(ctx, "Added $appName to your trackers", Toast.LENGTH_LONG).show()
+    }
+
+    fun addTrackers(ctx: Context, sharedPreferences: SharedPreferences, repos: List<String>) {
+        println("Adding ${repos.size} trackers")
+        val existing = sharedPreferences.getStringSet(APP_TRACKERS, defaultTrackers)!!
+        val newList = mutableSetOf<String>()
+        newList.addAll(existing)
+        newList.addAll(repos)
+        println("New set: $newList")
+        val editor = sharedPreferences.edit()
+        editor.putStringSet("app_trackers", newList)
+        editor.apply()
+        Toast.makeText(ctx, "Added ${repos.size} trackers", Toast.LENGTH_LONG).show()
     }
 
     fun removeTracker(ctx: Context, sharedPreferences: SharedPreferences, appName: String, repo: String) {
@@ -36,6 +50,15 @@ object PersistentState {
         editor.putStringSet("app_trackers", newList)
         editor.apply()
         Toast.makeText(ctx, "Deleted $appName from your trackers", Toast.LENGTH_LONG).show()
+    }
+
+    fun removeAllTrackers(ctx: Context, sharedPreferences: SharedPreferences) {
+        println("Removing all Trackers")
+        val newList = mutableSetOf<String>()
+        val editor = sharedPreferences.edit()
+        editor.putStringSet("app_trackers", newList)
+        editor.apply()
+        Toast.makeText(ctx, "Deleted all trackers", Toast.LENGTH_LONG).show()
     }
 
 }
