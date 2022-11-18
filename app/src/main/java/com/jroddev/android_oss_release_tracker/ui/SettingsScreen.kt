@@ -70,7 +70,7 @@ fun RepoListExporter() {
     TextButton(
         modifier = Modifier.fillMaxWidth(),
         onClick = {
-            writer.launch("test.txt")
+            writer.launch("oss_trackers.txt")
         }) {
         Text(text = "Export Repo List")
     }
