@@ -25,7 +25,7 @@ data class LatestVersionData(
 data class RepoMetaData(
     val repoUrl: String,
     val requestQueue: RequestQueue,
-    ) {
+) {
 
     val repo: Repo? = Repo.Helper.new(repoUrl)
     var orgName: String
@@ -54,18 +54,21 @@ data class RepoMetaData(
             val scope = CoroutineScope(Job() + Dispatchers.Main)
             scope.launch {
                 println("Starting API calls for $repoUrl")
-                defaultBranch = when (val result = repo.fetchBranchName(orgName, appName, requestQueue)) {
-                    is Either.Left -> result.value
-                    is Either.Right -> {
-                        errors.add(result.value.message ?: "failed to retrieve defaultBranch")
-                        state.value = MetaDataState.Errored
-                        "master"
+                defaultBranch =
+                    when (val result = repo.fetchBranchName(orgName, appName, requestQueue)) {
+                        is Either.Left -> result.value
+                        is Either.Right -> {
+                            errors.add(result.value.message ?: "failed to retrieve defaultBranch")
+                            state.value = MetaDataState.Errored
+                            "master"
+                        }
                     }
-                }
                 println("defaultBranch $defaultBranch")
 
-                androidRoot = repo.tryDetermineAndroidRoot(orgName, appName,
-                    defaultBranch!!, requestQueue)
+                androidRoot = repo.tryDetermineAndroidRoot(
+                    orgName, appName,
+                    defaultBranch!!, requestQueue
+                )
 
                 iconUrl.value = repo.getIconUrl(repoUrl, defaultBranch!!, androidRoot!!)
                 println("iconUrl: ${iconUrl.value}")
@@ -81,7 +84,7 @@ data class RepoMetaData(
                 }
                 println("package Name: ${packageName.value}")
 
-                when(val result = repo.fetchLatestVersion(orgName, appName, requestQueue)) {
+                when (val result = repo.fetchLatestVersion(orgName, appName, requestQueue)) {
                     is Either.Left -> {
                         println("latestVersion: ${result.value}")
                         latestVersion.value = result.value.version
@@ -105,25 +108,40 @@ interface Repo {
     fun getApplicationName(repoUrl: String): String
     fun getIconUrl(repoUrl: String, branch: String, androidRoot: String): String
     fun getUrlOfRawFile(org: String, app: String, branch: String, filepath: String): String
-    suspend fun fetchBranchName(org: String, app: String, requestQueue: RequestQueue): Either<String, Error>
-    suspend fun fetchLatestVersion(org: String, app: String, requestQueue: RequestQueue): Either<LatestVersionData, Error>
-    suspend fun tryDetermineAndroidRoot(org: String, app: String, branch: String, requestQueue: RequestQueue): String
+    suspend fun fetchBranchName(
+        org: String,
+        app: String,
+        requestQueue: RequestQueue
+    ): Either<String, Error>
+
+    suspend fun fetchLatestVersion(
+        org: String,
+        app: String,
+        requestQueue: RequestQueue
+    ): Either<LatestVersionData, Error>
+
+    suspend fun tryDetermineAndroidRoot(
+        org: String,
+        app: String,
+        branch: String,
+        requestQueue: RequestQueue
+    ): String
 
 
     object Helper {
-        fun new(repoUrl: String): Repo? =
+        fun new(repoUrl: String): Repo =
             if (repoUrl.contains("github")) {
                 GitHub()
-        } else if (repoUrl.contains("gitlab")) {
-                GitLab()
             } else {
-                null
+                // If not GitHub, then we make an assumption that this is GitLab
+                // Supports gitlab.com and self-hosted variants
+                GitLab()
             }
     }
 }
 
 
-abstract class CommonRepo: Repo {
+abstract class CommonRepo : Repo {
 
     abstract fun getFileMetaDataUrl(org: String, app: String, branch: String, file: String): String
     abstract fun getRepoMetaDataUrl(org: String, app: String): String
@@ -134,7 +152,8 @@ abstract class CommonRepo: Repo {
 
     // Strip everything before the first number. Then any non-whitespace character is allowed
     val VERSION_NAME_REGEX = "([0-9]+\\S*)".toRegex()
-    fun cleanVersionName(input: String): String = VERSION_NAME_REGEX.find(input)?.groups?.get(0)?.value ?: "unknown"
+    fun cleanVersionName(input: String): String =
+        VERSION_NAME_REGEX.find(input)?.groups?.get(0)?.value ?: "unknown"
 
     // from repo URL https://gitlab.com/AuroraOSS/AuroraStore
     // returns AuroraOSS
@@ -150,7 +169,11 @@ abstract class CommonRepo: Repo {
         return url.path.split("/")[2]
     }
 
-    override suspend fun fetchBranchName(org: String, app: String, requestQueue: RequestQueue): Either<String, Error> {
+    override suspend fun fetchBranchName(
+        org: String,
+        app: String,
+        requestQueue: RequestQueue
+    ): Either<String, Error> {
         val url = getRepoMetaDataUrl(org, app)
         return when (val response = ApiUtils.getJsonObject(url, requestQueue)) {
             is Either.Left -> {
@@ -168,7 +191,11 @@ abstract class CommonRepo: Repo {
         }
     }
 
-    override suspend fun fetchLatestVersion(org: String, app: String, requestQueue: RequestQueue): Either<LatestVersionData, Error> {
+    override suspend fun fetchLatestVersion(
+        org: String,
+        app: String,
+        requestQueue: RequestQueue
+    ): Either<LatestVersionData, Error> {
         val url = getReleasesUrl(org, app)
         return when (val response = ApiUtils.getJsonArray(url, requestQueue)) {
             is Either.Left -> {
@@ -187,10 +214,19 @@ abstract class CommonRepo: Repo {
         }
     }
 
-    override suspend fun tryDetermineAndroidRoot(org: String, app: String, branch: String, requestQueue: RequestQueue): String {
+    override suspend fun tryDetermineAndroidRoot(
+        org: String,
+        app: String,
+        branch: String,
+        requestQueue: RequestQueue
+    ): String {
         val candidates = listOf("app", "android/app")
         candidates.forEach { candidate ->
-            if (ApiUtils.get(getFileMetaDataUrl(org, app, branch, "$candidate/build.gradle"), requestQueue).isLeft()) {
+            if (ApiUtils.get(
+                    getFileMetaDataUrl(org, app, branch, "$candidate/build.gradle"),
+                    requestQueue
+                ).isLeft()
+            ) {
                 println("Android Root for $org/$app detected as $candidate")
                 return candidate
             }
