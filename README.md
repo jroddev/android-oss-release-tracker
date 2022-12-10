@@ -6,7 +6,11 @@
 - Opens new version in browser for you to install yourself
 - Bulk Import and Export of repo list
 
-<p align="left"><a href="https://apt.izzysoft.de/fdroid/index/apk/com.jroddev.android_oss_release_tracker"><img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" height=80/></a></p>
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
+     alt="Get it on F-Droid"
+     height="80">](https://f-droid.org/packages/com.jroddev.android_oss_release_tracker/)
+
+or get the APK from the [Releases Section](https://github.com/jroddev/android-oss-release-tracker/releases/latest).
 
 ---
 
