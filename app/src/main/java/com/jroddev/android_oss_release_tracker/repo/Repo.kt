@@ -151,9 +151,9 @@ abstract class CommonRepo : Repo {
     abstract fun parseReleasesJson(data: JSONArray): LatestVersionData
 
     // Strip everything before the first number. Then any non-whitespace character is allowed
-    val VERSION_NAME_REGEX = "([0-9]+\\S*)".toRegex()
-    fun cleanVersionName(input: String): String =
-        VERSION_NAME_REGEX.find(input)?.groups?.get(0)?.value ?: "unknown"
+    val VERSION_NAME_REGEX = "([0-9]\\x2E[0-9]+\\S*)".toRegex()
+    fun cleanVersionName(input: String): String? =
+        VERSION_NAME_REGEX.find(input)?.groups?.get(0)?.value
 
     // from repo URL https://gitlab.com/AuroraOSS/AuroraStore
     // returns AuroraOSS

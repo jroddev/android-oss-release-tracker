@@ -43,7 +43,7 @@ class GitLab : CommonRepo() {
         val firstEntry = data.get(0) as JSONObject
 
         return LatestVersionData(
-            version = cleanVersionName(firstEntry.getString("name").ifBlank { firstEntry.getString("tag_name") }),
+            version = cleanVersionName(firstEntry.getString("name")) ?: cleanVersionName(firstEntry.getString("tag_name"))  ?: "unknown",
             url = firstEntry.getJSONObject("_links").getString("self"),
             date = firstEntry.getString("released_at")
         )

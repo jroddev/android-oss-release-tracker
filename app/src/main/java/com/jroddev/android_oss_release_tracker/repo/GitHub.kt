@@ -39,7 +39,7 @@ class GitHub : CommonRepo() {
         val firstEntry = data.get(0) as JSONObject
 
         return LatestVersionData(
-            version = cleanVersionName(firstEntry.getString("name").ifBlank { firstEntry.getString("tag_name") }),
+            version = cleanVersionName(firstEntry.getString("name")) ?: cleanVersionName(firstEntry.getString("tag_name"))  ?: "unknown",
             url = firstEntry.getString("html_url"),
             date = firstEntry.getString("published_at")
         )
