@@ -1,4 +1,11 @@
 # Android OSS Release Tracker
+[![unmaintained](https://img.shields.io/badge/unmaintained-%E2%98%A5%20red?style=flat)](https://github.com/ImranR98/Obtainium)
+
+> **⚠️  This repository is unmaintained.**  
+> I’m now using **[Obtainium](https://github.com/ImranR98/Obtainium)**
+
+---
+
 <img src="https://github.com/jroddev/android-oss-release-tracker/blob/master/app/src/main/ic_launcher-playstore.png" width=10%, height=10%)>
 
 - Subscribe to Android OSS repositories (GitHub and GitLab)
